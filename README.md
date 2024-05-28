@@ -3,7 +3,7 @@ June, 2024.
 
 * **61105** - Causse, Juan Ignacio
 
-* **XXXXX** - De Caro, Guido
+* **61590** - De Caro, Guido
 
 ## Instalation Guide
 
