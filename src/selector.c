@@ -14,6 +14,8 @@ typedef struct _Selector_t {
     unsigned int    write_count;    // Number of sockets added for WRITE operations.
     fd_set          write_set;      // Sockets added for WRITE operations.
 
+    int             maxfd;          // Greatest file descriptor number (of both read an write sets).
+
     HashMap         sock_types;     // HashMap containing all socket types.
     HashMap         sock_data;      // HashMap containing all socket data pointers.
 

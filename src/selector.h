@@ -4,6 +4,7 @@
  *              the same time, useful for non-blocking socket applications.
  * 
  * \note        HashMap library is required.
+ * \note        LinkedList library is required.
  * 
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
@@ -13,8 +14,9 @@
 #define __SELECTOR_H__
 
 #include <stdbool.h>
-#include <select.h>
+#include <sys/select.h>
 #include "hashmap.h"
+#include "linkedlist.h"
 
 /*************************************************************************/
 /*                              CUSTOMIZABLE                             */
@@ -47,6 +49,9 @@ typedef enum {
     SELECTOR_READ_WRITE         = SELECTOR_READ | SELECTOR_WRITE
 } SelectorModes;
 
+/**
+ * \enum        Errors.
+*/
 typedef enum {
     SELECTOR_OK                 =  0,   // 0: No error
     SELECTOR_NO_MEMORY          = -1    // 1: Not enough memory
