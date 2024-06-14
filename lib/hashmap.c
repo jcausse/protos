@@ -138,7 +138,9 @@ HashMapErrors HashMap_peek(HashMap const map, const HashMapKey key, HashMapValue
         default:
             break;
     }
-    *val = value;
+    if (val != NULL){
+        * val = value;
+    }
     return HASHMAP_OK;
 }
 
@@ -155,7 +157,9 @@ HashMapErrors HashMap_pop(HashMap const map, const HashMapKey key, HashMapValue 
         default:
             break;
     }
-    *val = value;
+    if (val != NULL){
+        * val = value;
+    }
     // Decrement the size
     map->elem_count--;
     return HASHMAP_OK;
