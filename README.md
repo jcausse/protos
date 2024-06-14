@@ -7,6 +7,8 @@ June, 2024.
 
 * **62774** - Mindlin, Felipe
 
+* **62351** - Sendot, Francisco
+
 ## Instalation Guide
 
 1. Step 1
