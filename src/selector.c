@@ -6,11 +6,11 @@
 #define SOCK_ARRAY_EL_SIZE (sizeof(int))            // Size of 1 file descriptor.
 
 typedef struct _Selector_t {
-    int *           read_fds;       // Array of file descriptors added for READ operations.
+    LinkedList      read_fds;       // File descriptors added for READ operations.
     unsigned int    read_count;     // Number of sockets added for READ operations.
     fd_set          read_set;       // Sockets added for READ operations.
 
-    int *           write_fds;      // Array of file descriptors added for WRITE operations.
+    LinkedList      write_fds;      // File descriptors added for WRITE operations.
     unsigned int    write_count;    // Number of sockets added for WRITE operations.
     fd_set          write_set;      // Sockets added for WRITE operations.
 

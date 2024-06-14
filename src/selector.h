@@ -66,7 +66,7 @@ typedef enum {
  * 
  * \return      A new Selector on success, NULL on failure (memory not available).
 */
-Selector Selector_create(int timeout);
+Selector Selector_create();
 
 /**
  * \brief       Creates a new Selector with a custom timeout.
