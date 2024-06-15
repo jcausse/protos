@@ -62,6 +62,8 @@ def test_all():
     file_list: list[str] = [f for f in os.listdir('.') if os.path.isfile(f)]
     
     for lib_name in libraries:
+        if lib_name.startswith('#'):
+            continue
         lib = Library(lib_name, args.verbose)
         if lib.check(file_list) is False:
             print(f'Missing files for library: {lib_name}')
