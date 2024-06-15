@@ -5,6 +5,10 @@ June, 2024.
 
 * **61590** - De Caro, Guido
 
+* **62774** - Mindlin, Felipe
+
+* **62351** - Sendot, Francisco
+
 ## Instalation Guide
 
 1. Step 1
