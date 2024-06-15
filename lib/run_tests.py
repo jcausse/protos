@@ -39,7 +39,8 @@ class Library:
         return all(file in file_list for file in self.__files)
     
     def compile(self) -> bool:
-        cmd: str = f"{COMPILER} {CFLAGS} {self.__source} {self.__tester} -o {self.__name}.bin {'' if self.__verbose else ' > /dev/null 2>&1'}"
+        cmd: str = f"{COMPILER} {CFLAGS} {self.__source} {self.__tester} -o {self.__name}.bin "
+        cmd += f"{'' if self.__verbose else ' > /dev/null 2>&1'}"
         if self.__verbose:
             print(cmd)
         return os.system(cmd) == 0
