@@ -2,28 +2,34 @@ import os
 import argparse
 
 COMPILER: str = 'gcc'
-COMPILER_VERSION_CMD: str= 'gcc -v'
-CFLAGS:str = '-std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L'
+COMPILER_VERSION_CMD: str = 'gcc -v'
+CFLAGS: str = '-std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L'
 
-VALGRIND:str = 'valgrind'
-VALGRIND_VERSION_CMD:str = 'valgrind --version'
+VALGRIND: str = 'valgrind'
+VALGRIND_VERSION_CMD: str = 'valgrind --version'
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Library test automation tool')
-    parser.add_argument('-l', '--libfile', type=str, required=False, default='libs.txt', help='File indicating all libraries to be tested')
-    parser.add_argument('-v', '--verbose', required=False, action='store_true', help='Enable verbose output')
+    parser.add_argument('-l', '--libfile', type=str, required=False, default='libs.txt',
+                        help='File indicating all libraries to be tested')
+    parser.add_argument('-v', '--verbose', required=False, action='store_true',
+                        help='Enable verbose output')
     return parser.parse_args()
+
 
 def check_compiler():
     return os.system(f'{COMPILER_VERSION_CMD} > /dev/null 2>&1') == 0
 
+
 def check_valgrind():
     return os.system(f'{VALGRIND_VERSION_CMD} > /dev/null 2>&1') == 0
+
 
 class Library:
     def __init__(self, name: str, verbose: bool):
         self.__name: str = name
-        self.__verbose: bool =  verbose
+        self.__verbose: bool = verbose
         self.__source: str = f'{name}.c'
         self.__header: str = f'{name}.h'
         self.__tester: str = f'{name}_test.c'
@@ -43,6 +49,7 @@ class Library:
         if self.__verbose:
             print(cmd)
         return os.system(cmd) == 0
+
 
 def test_all():
     if check_compiler() is False:
@@ -81,6 +88,7 @@ def test_all():
             print()
 
     os.system('rm ./*.bin')
+
 
 if __name__ == '__main__':
     test_all()
