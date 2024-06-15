@@ -38,6 +38,15 @@ typedef struct _Selector_t {
  */
 static inline void set_if_greater(int * const current, int candidate);
 
+/**
+ * \brief       Check if the received mode is valid or not.
+ * 
+ * \param[in] mode  Mode to check.
+ * 
+ * \return      Boolean value: true if invalid, false otherwise.
+ */
+static inline bool is_invalid_mode(uint32_t mode);
+
 /*************************************************************************/
 /* HashMap callbacks                                                     */
 /*************************************************************************/
@@ -87,12 +96,17 @@ Selector Selector_create_timeout(int timeout){
 SelectorErrors Selector_add(Selector const self, 
     const int fd, 
     SelectorModes mode, 
-    const int type, 
-    const void * const data
+    int type, 
+    void * data
 ){
-    /* Check if an valid Selector has been received */
+    /* Check if a valid Selector has been received */
     if (self == NULL){
         return SELECTOR_INVALID;
+    }
+
+    /* Check if a valid mode has been received */
+    if (is_invalid_mode(mode)){
+        return SELECTOR_BAD_MODE;
     }
 
     /* Check if there is any operation to perform */
@@ -110,59 +124,63 @@ SelectorErrors Selector_add(Selector const self,
         return SELECTOR_OK;
     }
 
+    /* Attempt to save type to dynamic memory */
+    int * type_internal = SELECTOR_MALLOC(sizeof(int));
+    if (type_internal == NULL){
+        return SELECTOR_NO_MEMORY;
+    }
+    * type_internal = type;
+
     /* Attempt to insert the fd to the lists */
-    {   
-        bool on_error_remove = false;
-        TRY{
-            if (add_read){
-                /* 
-                 * Prepend (not append) the file descriptor, because LinkedList_pop is O(n),
-                 * while LinkedList_shift has time complexity O(1).
-                 */
-                THROW_IF_NOT(LinkedList_prepend(self->read_fds, fd) == LINKEDLIST_OK);
-                on_error_remove = true;
-            }
-            if (add_write){
-                THROW_IF_NOT(LinkedList_prepend(self->write_fds, fd) == LINKEDLIST_OK);
-            }
+    /* 
+     * Prepend (not append) the file descriptor, because LinkedList_pop is O(n),
+     * while LinkedList_shift has time complexity O(1).
+     */
+    if (add_read && LinkedList_prepend(self->read_fds, fd) != LINKEDLIST_OK){
+        SELECTOR_FREE(type_internal);
+        return SELECTOR_NO_MEMORY;
+    }
+    if (add_write && LinkedList_prepend(self->write_fds, fd) == LINKEDLIST_OK){
+        /* 
+         * Remove file descriptor from the read_fds LinkedList if an error occurred when
+         * adding it to the write_fds LinkedList.
+         */
+        if(add_read){
+            LinkedList_shift(self->read_fds, NULL);  // Time complexity: O(1).
         }
-        CATCH{
-            /* 
-             * Remove file descriptor from the read_fds LinkedList if an error occurred when
-             * adding it to the write_fds LinkedList.
-             */
-            if (on_error_remove){
-                LinkedList_shift(self->read_fds, NULL);  // Time complexity: O(1).
-            }
-            return SELECTOR_NO_MEMORY;
-        }
+        SELECTOR_FREE(type_internal);
+        return SELECTOR_NO_MEMORY;
     }
 
     /* Attempt to insert data and type into the HashMaps */
-    {
-        HashMapErrors err;
-        bool on_error_remove_type = false;
-        TRY{
-            
-            if (type > 0){
-                /*
-                 * Note that HashMap_put returns HASHMAP_DUPLICATED_KEY if fd is already present.
-                 * This error is ignored on purpose: as stated in the Selector documentation, the
-                 * type and data associated to the file descriptor are not modified if it has previously
-                 * been added to the Selector (original type and data is kept).
-                 */
-                err = HashMap_put(self->sock_types, fd, type);
-                THROW_IF(err == HASHMAP_NO_MEMORY);
-                if (err != HASHMAP_DUPLICATED_KEY){
-                    on_error_remove_type = true;
-                }
+    HashMapErrors err;
+    bool on_error_remove_type = false;
+    if (type >= 0){
+        /*
+         * Note that HashMap_put returns HASHMAP_DUPLICATED_KEY if fd is already present.
+         * This error is ignored on purpose: as stated in the Selector documentation, the
+         * type and data associated to the file descriptor are not modified if it has previously
+         * been added to the Selector (original type and data is kept).
+         */
+        if((err = HashMap_put(self->sock_types, fd, (void *) type_internal)) == HASHMAP_NO_MEMORY){
+            if (add_read){
+                LinkedList_shift(self->read_fds, NULL);
             }
-            if (data != NULL){
-                err = HashMap_put(self->sock_data, fd, data);
-                THROW_IF(err == HASHMAP_NO_MEMORY);
+            if (add_write){
+                LinkedList_shift(self->write_fds, NULL);
             }
+            SELECTOR_FREE(type_internal);
+            return SELECTOR_NO_MEMORY;
         }
-        CATCH{
+        if (err != HASHMAP_DUPLICATED_KEY){
+            on_error_remove_type = true;
+        }
+    }
+    else{
+        SELECTOR_FREE(type_internal);
+    }
+    if (data != NULL){
+        if (HashMap_put(self->sock_data, fd, data) == HASHMAP_NO_MEMORY){
             /* 
              * Remove file descriptor from the sock_types HashMap if an error occurred when
              * adding it to the sock_data HashMap.
@@ -176,6 +194,7 @@ SelectorErrors Selector_add(Selector const self,
             if (add_write){
                 LinkedList_shift(self->write_fds, NULL);
             }
+            SELECTOR_FREE(type_internal);
             return SELECTOR_NO_MEMORY;
         }
     }
@@ -195,7 +214,24 @@ SelectorErrors Selector_add(Selector const self,
 }
 
 SelectorErrors Selector_remove(Selector const self, const int fd, SelectorModes mode){
-    // TODO
+    /* Check if a valid Selector has been received */
+    if (self == NULL){
+        return SELECTOR_INVALID;
+    }
+
+    /* Check if a valid mode has been received */
+    if (is_invalid_mode(mode)){
+        return SELECTOR_BAD_MODE;
+    }
+
+    /* Check if the file descriptor was added previously */
+
+
+    /* Check if there is any operation to perform */
+    bool remove_read   = (bool) (mode & SELECTOR_READ);
+    bool remove_write  = (bool) (mode & SELECTOR_WRITE);
+
+
     return SELECTOR_OK;
 }
 
@@ -236,6 +272,10 @@ static inline void set_if_greater(int * const current, int candidate){
     if (candidate > (* current)){
         * current = candidate;
     }
+}
+
+static inline bool is_invalid_mode(uint32_t mode){
+    return (bool)(mode & (~ SELECTOR_READ_WRITE));
 }
 
 /*************************************************************************/

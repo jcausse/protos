@@ -55,9 +55,12 @@ typedef enum {
  * \enum        Selector Errors.
 */
 typedef enum {
-    SELECTOR_OK                 =  0,   // No error
-    SELECTOR_NO_MEMORY          = -1,   // Not enough memory
-    SELECTOR_INVALID            = -2    // Selector state is not valid or self is NULL
+    SELECTOR_OK                 =  0,   // No error.
+    SELECTOR_NO_MEMORY          = -1,   // Not enough memory.
+    SELECTOR_BAD_MODE           = -2,   // Invalid mode provided.
+    SELECTOR_INVALID            = -3,   // Selector state is not valid or self is NULL.
+    SELECTOR_FD_NOT_PRESENT     = -4,   // Attempted to remove a file descriptor that
+                                        // is not present in the Selector.
 } SelectorErrors;
 
 /*************************************************************************/
@@ -93,7 +96,7 @@ Selector Selector_create_timeout(int timeout);
  * 
  * \details     This function also allows for additional information to be attached the
  *              file descriptor: an optional "type", and an optional "data".
- *              -   The "type" is intended to hold a positive integer that could help later
+ *              -   The "type" is intended to hold an integer >= 0 that could help later
  *                  determine the appropiate handler function for the file descriptor.
  *                  Not attached if "type" is a negative integer.
  *              -   The "data" allows for arbitrary information of any type (as it
@@ -114,16 +117,26 @@ Selector Selector_create_timeout(int timeout);
  *              1. SELECTOR_OK
  *              2. SELECTOR_INVALID
  *              3. SELECTOR_NO_MEMORY
+ *              4. SELECTOR_BAD_MODE
  */
 SelectorErrors Selector_add(Selector const self, 
     const int fd, 
     SelectorModes mode, 
-    const int type, 
-    const void * const data
+    int type, 
+    void * data
 );
 
 /**
- * TODO
+ * \brief       Remove a file descriptor from the Selector.
+ * 
+ * \param[in]   self    The Selector itself, returned by Selector_create.
+ * \param[in]   fd      File descriptor.
+ * \param[in]   mode    Mode (read, write, read/write).
+ * 
+ * \return      Can return the following error codes (see Selector Errors enumeration):
+ *              1. SELECTOR_OK
+ *              2. SELECTOR_INVALID
+ *              3. SELECTOR_BAD_MODE
 */
 SelectorErrors Selector_remove(Selector const self, const int fd, SelectorModes mode);
 
