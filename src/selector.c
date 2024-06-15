@@ -21,7 +21,7 @@ typedef struct _Selector_t {
     HashMap         sock_types;     // HashMap containing all socket types.
     HashMap         sock_data;      // HashMap containing all socket data pointers.
 
-    bool            use_timeout;    // Indicates whether the timeout should be passed to select(3) or NULL.
+    bool            use_timeout;    // Indicates whether the timeout should be passed to select (2) or NULL.
     struct timeval  timeout;        // Timeout used for select (2).
 } _Selector_t;
 
