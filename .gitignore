@@ -54,6 +54,7 @@ dkms.conf
 # Others
 .DS_Store
 .vscode/
+.idea/
 
 # Python
 **/__pycache__/
