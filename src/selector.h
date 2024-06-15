@@ -5,6 +5,7 @@
  * 
  * \note        HashMap library is required.
  * \note        LinkedList library is required.
+ * \note        Exceptions header file is required.
  * 
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
@@ -17,6 +18,7 @@
 #include <sys/select.h>
 #include "hashmap.h"
 #include "linkedlist.h"
+#include "exceptions.h"
 
 /*************************************************************************/
 /*                              CUSTOMIZABLE                             */
@@ -50,11 +52,12 @@ typedef enum {
 } SelectorModes;
 
 /**
- * \enum        Errors.
+ * \enum        Selector Errors.
 */
 typedef enum {
-    SELECTOR_OK                 =  0,   // 0: No error
-    SELECTOR_NO_MEMORY          = -1    // 1: Not enough memory
+    SELECTOR_OK                 =  0,   // No error
+    SELECTOR_NO_MEMORY          = -1,   // Not enough memory
+    SELECTOR_INVALID            = -2    // Selector state is not valid or self is NULL
 } SelectorErrors;
 
 /*************************************************************************/
@@ -75,22 +78,27 @@ Selector Selector_create();
  *                      to become ready for any type of operation (read / write). -1 means no
  *                      timeout, so *Selector_select* will wait indefinitely for at least 1 
  *                      file descriptor to become ready (blocking function call).
+ *                      This parameter can either be set to -1 to indicate no timeout, or to a
+ *                      number greater or equal to 1.
  * 
- * \return      A new Selector on success, NULL on failure (memory not available).
+ * \return      A new Selector on success, NULL on failure (memory not available or invalid timeout).
 */
 Selector Selector_create_timeout(int timeout);
 
 /**
  * \brief       Adds a new file descriptor to the Selector. If the file descriptor has
- *              already been registered, its mode is updated, but its *type* and its
+ *              already been registered for any operation, its mode is updated (it is added for
+ *              any operations it is not currently subscribed for), but its *type* and its
  *              *data* are NOT modified.
  * 
  * \details     This function also allows for additional information to be attached the
  *              file descriptor: an optional "type", and an optional "data".
- *              -   The "type" is intended to hold a constant that could help later
+ *              -   The "type" is intended to hold a positive integer that could help later
  *                  determine the appropiate handler function for the file descriptor.
+ *                  Not attached if "type" is a negative integer.
  *              -   The "data" allows for arbitrary information of any type (as it
  *                  is a void pointer) to be associated to the file descriptor.
+ *                  Not attached if "data" is NULL.
  *              Note that the provided "type" and the provided "data" are not used nor
  *              processed internally by the Selector. These parameters are ment to be
  *              retrieved along with the file descriptor when calling *Selector_read_next*
@@ -102,7 +110,10 @@ Selector Selector_create_timeout(int timeout);
  * \param[in]   type    Additional type associated to the file descriptor (see details).
  * \param[in]   data    Additional data associated to the file descriptor (see details).
  * 
- * \return      SELECTOR_OK on success, TODO on failure.
+ * \return      Can return the following error codes (see Selector Errors enumeration):
+ *              1. SELECTOR_OK
+ *              2. SELECTOR_INVALID
+ *              3. SELECTOR_NO_MEMORY
  */
 SelectorErrors Selector_add(Selector const self, 
     const int fd, 
@@ -114,10 +125,7 @@ SelectorErrors Selector_add(Selector const self,
 /**
  * TODO
 */
-SelectorErrors Selector_remove(Selector const self,
-    const int fd,
-    SelectorModes mode
-);
+SelectorErrors Selector_remove(Selector const self, const int fd, SelectorModes mode);
 
 /**
  * TODO
@@ -132,11 +140,7 @@ bool Selector_read_has_next(Selector const self);
 /**
  * TODO
 */
-SelectorErrors Selector_read_next(Selector const self,
-    int * fd,
-    int * type,
-    void ** data
-);
+SelectorErrors Selector_read_next(Selector const self, int * fd, int * type, void ** data);
 
 /**
  * TODO
@@ -146,15 +150,11 @@ bool Selector_write_has_next(Selector const self);
 /**
  * TODO
 */
-SelectorErrors Selector_write_next(Selector const self,
-    int * fd,
-    int * type,
-    void ** data
-);
+SelectorErrors Selector_write_next(Selector const self, int * fd, int * type, void ** data);
 
 /**
  * TODO
 */
-void Selector_cleanup(Selector self);
+void Selector_cleanup(Selector self /* TODO Add HashMap cleanup callback */ );
 
 #endif // __SELECTOR_H__
