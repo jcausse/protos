@@ -35,6 +35,13 @@
 /* Memory freeing function equivalent to free (3) or a free (3) wrapper. */
 #define SELECTOR_FREE(ptr) free((ptr))
 
+/**
+ * \typedef     Callback used to free file descriptor data when a file descriptor is removed from the Selector, or when performing
+ *              a cleanup. Must receive exactly one parameter to which the data will be passed (as void *), and return
+ *              nothing.
+ */
+typedef void (* SelectorDataCleanupCallback) (void *);
+
 /*************************************************************************/
 
 /**
@@ -59,8 +66,6 @@ typedef enum {
     SELECTOR_NO_MEMORY          = -1,   // Not enough memory.
     SELECTOR_BAD_MODE           = -2,   // Invalid mode provided.
     SELECTOR_INVALID            = -3,   // Selector state is not valid or self is NULL.
-    SELECTOR_FD_NOT_PRESENT     = -4,   // Attempted to remove a file descriptor that
-                                        // is not present in the Selector.
 } SelectorErrors;
 
 /*************************************************************************/
@@ -68,11 +73,14 @@ typedef enum {
 /**
  * \brief       Creates a new Selector with no timeout (*Selector_select* will block until
  *              any file descriptor becomes ready).
- * \details     Calling this function is equivalent to *Selector_create_timeout(-1)*.
+ * \details     Calling this function is equivalent to *Selector_create_timeout(-1, data_free_cb)*.
  * 
- * \return      A new Selector on success, NULL on failure (memory not available).
+ * \param[in] data_free_cb  Callback used to free file descriptor data when a file descriptor is
+ *                          removed from the Selector, or when performing a cleanup.
+ * 
+ * \return      A new Selector on success, NULL on failure (memory not available or NULL *data_free_cb*).
 */
-Selector Selector_create();
+Selector Selector_create(SelectorDataCleanupCallback data_free_cb);
 
 /**
  * \brief       Creates a new Selector with a custom timeout.
@@ -83,10 +91,13 @@ Selector Selector_create();
  *                      file descriptor to become ready (blocking function call).
  *                      This parameter can either be set to -1 to indicate no timeout, or to a
  *                      number greater or equal to 1.
+ * \param[in] data_free_cb  Callback used to free file descriptor data when a file descriptor is
+ *                          removed from the Selector, or when performing a cleanup.
  * 
- * \return      A new Selector on success, NULL on failure (memory not available or invalid timeout).
+ * \return      A new Selector on success, NULL on failure (memory not available, invalid timeout
+ *              or NULL *data_free_cb*).
 */
-Selector Selector_create_timeout(int timeout);
+Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_free_cb);
 
 /**
  * \brief       Adds a new file descriptor to the Selector. If the file descriptor has
@@ -127,18 +138,26 @@ SelectorErrors Selector_add(Selector const self,
 );
 
 /**
- * \brief       Remove a file descriptor from the Selector.
+ * \brief       Desubscribe file descriptor *fd* for *mode* operation. If after removing
+ *              the file descriptor for the selected operation it does not remain
+ *              subscribed for any other operation, its *data* will be free'd if the
+ *              *free_data* parameter is true.
  * 
- * \param[in]   self    The Selector itself, returned by Selector_create.
- * \param[in]   fd      File descriptor.
- * \param[in]   mode    Mode (read, write, read/write).
+ * \param[in]   self        The Selector itself, returned by Selector_create.
+ * \param[in]   fd          File descriptor.
+ * \param[in]   mode        Mode (read, write, read/write).
+ * \param[in]   free_data   Indicates whether to free associated data or not.
  * 
  * \return      Can return the following error codes (see Selector Errors enumeration):
  *              1. SELECTOR_OK
  *              2. SELECTOR_INVALID
  *              3. SELECTOR_BAD_MODE
 */
-SelectorErrors Selector_remove(Selector const self, const int fd, SelectorModes mode);
+SelectorErrors Selector_remove(Selector const self, 
+    const int fd, 
+    SelectorModes mode, 
+    bool free_data
+);
 
 /**
  * TODO
@@ -168,6 +187,6 @@ SelectorErrors Selector_write_next(Selector const self, int * fd, int * type, vo
 /**
  * TODO
 */
-void Selector_cleanup(Selector self /* TODO Add HashMap cleanup callback */ );
+void Selector_cleanup(Selector self);
 
 #endif // __SELECTOR_H__

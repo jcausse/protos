@@ -1,25 +1,22 @@
 #include "selector.h"
 
-#define MAX_SOCK 1023               // Maximum file descriptor number (imposed by glibc)
-
-#define SOCK_ARRAY_EL_MAX_COUNT (MAX_SOCK + 1)      // Maximum number of fds in a fd array.
-#define SOCK_ARRAY_EL_SIZE (sizeof(int))            // Size of 1 file descriptor.
-
 /*************************************************************************/
 /* Private data structures                                               */
 /*************************************************************************/
 
 typedef struct _Selector_t {
-    LinkedList      read_fds;       // File descriptors added for READ operations.
-    fd_set          read_set;       // Sockets added for READ operations.
+    LinkedList      read_fds;       // List of file descriptors added for READ operations.
+    fd_set          read_set;       // Set of file descriptors added for READ operations.
 
-    LinkedList      write_fds;      // File descriptors added for WRITE operations.
-    fd_set          write_set;      // Sockets added for WRITE operations.
+    LinkedList      write_fds;      // List of file descriptors added for WRITE operations.
+    fd_set          write_set;      // Set of file descriptors added for READ operations.
 
     int             maxfd;          // Greatest file descriptor number (of both read an write sets).
 
-    HashMap         sock_types;     // HashMap containing all socket types.
-    HashMap         sock_data;      // HashMap containing all socket data pointers.
+    HashMap         fd_types;     // HashMap containing all file descriptor types.
+    HashMap         fd_data;      // HashMap containing all file descriptor data pointers.
+
+    SelectorDataCleanupCallback data_free_fn; // Callback used for freeing file descriptor associated data.
 
     bool            use_timeout;    // Indicates whether the timeout should be passed to select (2) or NULL.
     struct timeval  timeout;        // Timeout used for select (2).
@@ -58,11 +55,11 @@ static bool key_equals(const uint16_t key1, const uint16_t key2);
 /* Public functions                                                      */
 /*************************************************************************/
 
-Selector Selector_create(){
-    return Selector_create_timeout(-1);
+Selector Selector_create(SelectorDataCleanupCallback data_free_cb){
+    return Selector_create_timeout(-1, data_free_cb);
 }
 
-Selector Selector_create_timeout(int timeout){
+Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_free_cb){
     if (timeout != -1 && timeout < 1){
         return NULL;
     }
@@ -71,18 +68,19 @@ Selector Selector_create_timeout(int timeout){
         THROW_IF((self = SELECTOR_CALLOC(1, sizeof(_Selector_t))) == NULL);
         THROW_IF((self->read_fds = LinkedList_create()) == NULL);
         THROW_IF((self->write_fds = LinkedList_create()) == NULL);
-        THROW_IF((self->sock_types = HashMap_create(multiplicative_hash, key_equals)) == NULL);
-        THROW_IF((self->sock_data = HashMap_create(multiplicative_hash, key_equals)) == NULL);
+        THROW_IF((self->fd_types = HashMap_create(multiplicative_hash, key_equals)) == NULL);
+        THROW_IF((self->fd_data = HashMap_create(multiplicative_hash, key_equals)) == NULL);
     }
     CATCH{
         if (self != NULL){
-            LinkedList_cleanup(self->read_fds);         // NULL-safe
-            LinkedList_cleanup(self->write_fds);        // NULL-safe
-            HashMap_cleanup(self->sock_types, NULL);    // NULL-safe
-            HashMap_cleanup(self->sock_data, NULL);     // NULL-safe
+            LinkedList_cleanup(self->read_fds);     // NULL-safe
+            LinkedList_cleanup(self->write_fds);    // NULL-safe
+            HashMap_cleanup(self->fd_types, NULL);  // NULL-safe
+            HashMap_cleanup(self->fd_data, NULL);   // NULL-safe
         }
         return NULL;
     }
+    self->data_free_fn = data_free_cb;
     if (timeout == -1){
         self->use_timeout = false;
     }
@@ -162,7 +160,7 @@ SelectorErrors Selector_add(Selector const self,
          * type and data associated to the file descriptor are not modified if it has previously
          * been added to the Selector (original type and data is kept).
          */
-        if((err = HashMap_put(self->sock_types, fd, (void *) type_internal)) == HASHMAP_NO_MEMORY){
+        if((err = HashMap_put(self->fd_types, fd, (void *) type_internal)) == HASHMAP_NO_MEMORY){
             if (add_read){
                 LinkedList_shift(self->read_fds, NULL);
             }
@@ -180,13 +178,13 @@ SelectorErrors Selector_add(Selector const self,
         SELECTOR_FREE(type_internal);
     }
     if (data != NULL){
-        if (HashMap_put(self->sock_data, fd, data) == HASHMAP_NO_MEMORY){
+        if (HashMap_put(self->fd_data, fd, data) == HASHMAP_NO_MEMORY){
             /* 
-             * Remove file descriptor from the sock_types HashMap if an error occurred when
-             * adding it to the sock_data HashMap.
+             * Remove file descriptor from the fd_types HashMap if an error occurred when
+             * adding it to the fd_data HashMap.
              */
             if (on_error_remove_type){
-                HashMap_pop(self->sock_types, fd, NULL);
+                HashMap_pop(self->fd_types, fd, NULL);
             }
             if (add_read){
                 LinkedList_shift(self->read_fds, NULL);
@@ -213,7 +211,11 @@ SelectorErrors Selector_add(Selector const self,
     return SELECTOR_OK;
 }
 
-SelectorErrors Selector_remove(Selector const self, const int fd, SelectorModes mode){
+SelectorErrors Selector_remove(Selector const self, 
+    const int fd, 
+    SelectorModes mode,
+    bool free_data
+){
     /* Check if a valid Selector has been received */
     if (self == NULL){
         return SELECTOR_INVALID;
@@ -224,13 +226,44 @@ SelectorErrors Selector_remove(Selector const self, const int fd, SelectorModes 
         return SELECTOR_BAD_MODE;
     }
 
-    /* Check if the file descriptor was added previously */
+    /* Remove the file descriptor from the sets */
+    bool remove_read   = (mode & SELECTOR_READ)  != 0;
+    bool remove_write  = (mode & SELECTOR_WRITE) != 0;
+    bool should_remove_data = remove_read && remove_write;
+    if (remove_read){
+        FD_CLR(fd, &(self->read_set));
+        LinkedList_remove_elem(self->read_fds, fd, true);
+        if (! should_remove_data){
+            should_remove_data = ! FD_ISSET(fd, &(self->write_set));
+        }
+    }
+    if (remove_write){
+        FD_CLR(fd, &(self->write_set));
+        LinkedList_remove_elem(self->write_fds, fd, true);
+        if (! should_remove_data){
+            should_remove_data = ! FD_ISSET(fd, &(self->read_set));
+        }
+    }
 
+    /* 
+     * Remove the data from the HashMaps, if necessary. Keep in mind that
+     * HashMap_pop might return HASHMAP_KEY_NOT_FOUND. This error is ignored on purpose.
+     */
+    if (should_remove_data){
+        /* Remove the file descriptor type */
+        int  * type = NULL;
+        HashMap_pop(self->fd_types, fd, (void **) &type);
+        if (type != NULL){
+            SELECTOR_FREE(type);
+        }
 
-    /* Check if there is any operation to perform */
-    bool remove_read   = (bool) (mode & SELECTOR_READ);
-    bool remove_write  = (bool) (mode & SELECTOR_WRITE);
-
+        /* Remove the file descriptor data */
+        void * data = NULL;
+        HashMap_pop(self->fd_data,  fd, &data);
+        if (type != NULL && free_data){
+            self->data_free_fn(data);
+        }
+    }
 
     return SELECTOR_OK;
 }
@@ -260,7 +293,7 @@ SelectorErrors Selector_write_next(Selector const self, int * fd, int * type, vo
     return SELECTOR_OK;
 }
 
-void Selector_cleanup(Selector self /* TODO Add HashMap cleanup callback */ ){
+void Selector_cleanup(Selector self){
     // TODO
 }
 
