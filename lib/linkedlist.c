@@ -36,6 +36,14 @@ static void _LinkedList_remove(LinkedList const self,
     int * elem, _LinkedList_Node_t * current, _LinkedList_Node_t * last
 );
 
+/**
+ * \brief   Remove every Node from the LinkedList, freeing the memory allocated
+ *          for them.
+ * 
+ * \param[in] self      The LinkedList itself.
+ */
+static void _LinkedList_clear(LinkedList const self);
+
 /*************************************************************************/
 /* Public functions                                                      */
 /*************************************************************************/
@@ -273,16 +281,23 @@ size_t LinkedList_size(LinkedList const self) {
     return self == NULL ? 0 : self->size;
 }
 
-void LinkedList_cleanup(LinkedList self){
-    if (self != NULL && self->head != NULL){
-        _LinkedList_Node_t * current = self->head, * next;
-        while (current != NULL){
-            next = current->next;
-            LINKEDLIST_FREE(current);
-            current = next;
-        }
+LinkedListErrors LinkedList_clear(LinkedList const self){
+    if (self == NULL) {
+        return LINKEDLIST_INVALID;
     }
-    LINKEDLIST_FREE(self);
+    _LinkedList_clear(self);        // Remove all Nodes
+    self->head = NULL;
+    self->tail = NULL;
+    self->size = 0;
+    self->was_modified = false;
+    return LINKEDLIST_OK;
+}
+
+void LinkedList_cleanup(LinkedList self){
+    if (self != NULL){
+        _LinkedList_clear(self);    // Remove all Nodes
+        LINKEDLIST_FREE(self);
+    }
 }
 
 /*************************************************************************/
@@ -309,4 +324,13 @@ static void _LinkedList_remove(LinkedList const self,
     LINKEDLIST_FREE(current);
     self->was_modified = true;
     self->size--;
+}
+
+static void _LinkedList_clear(LinkedList const self){
+    _LinkedList_Node_t * current = self->head, * next;
+    while (current != NULL){
+        next = current->next;
+        LINKEDLIST_FREE(current);
+        current = next;
+    }
 }

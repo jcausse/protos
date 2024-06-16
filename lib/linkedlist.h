@@ -231,6 +231,18 @@ LinkedListErrors LinkedList_foreach(LinkedList * self,
 size_t LinkedList_size(LinkedList const self);
 
 /**
+ * \brief       Remove every element in the LinkedList without destroying it, so it can
+ *              be reused. This is done more efficiently than just doing *LinkedList_pop*
+ *              operations until it is empty.
+ *              The LinkedList is left with the same state as a newly created one.
+ * 
+ * \param[in] self      The LinkedList itself.
+ * 
+ * \return      LINKEDLIST_OK on success. LINKEDLIST_INVALID if self is NULL.
+ */
+LinkedListErrors LinkedList_clear(LinkedList const self);
+
+/**
  * \brief       Destroy the LinkedList and free all memory.
  * 
  * \param[in] self      The LinkedList itself.
