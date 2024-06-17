@@ -432,32 +432,6 @@ static inline bool is_invalid_mode(uint32_t mode){
     return (bool)(mode & (~ SELECTOR_READ_WRITE));
 }
 
-/*************************************************************************/
-/* HashMap callbacks                                                     */
-/*************************************************************************/
-
-static unsigned int num_digits(unsigned int number) {
-    if (number == 0){
-        return 1;
-    }
-    int digits = 0;
-    while (number > 0){
-        number /= 10;
-        digits++;
-    }
-    return digits;
-}
-
-static uint32_t multiplicative_hash(const uint16_t key, const size_t size) {
-    const unsigned long long A = 2654435769U; // Knuth's multiplicative constant. See https://gist.github.com/badboy/6267743.
-    unsigned long long hash = key * A;
-    return (hash >> (32 - num_digits(size))) % size;
-}
-
-static bool key_equals(const uint16_t key1, const uint16_t key2){
-    return key1 == key2;
-}
-
 static void activity_list_creator(int fd, void * arg){
     struct _LListArg * arg_cast = (struct _LListArg *) arg;
     fd_set * set = arg_cast->set;
@@ -498,4 +472,30 @@ static int _Selector_next(Selector const self, LinkedList list, int * type, void
 
 static void _Selector_free_cb(void * ptr){
     SELECTOR_FREE(ptr);
+}
+
+/*************************************************************************/
+/* HashMap callbacks                                                     */
+/*************************************************************************/
+
+static unsigned int num_digits(unsigned int number) {
+    if (number == 0){
+        return 1;
+    }
+    int digits = 0;
+    while (number > 0){
+        number /= 10;
+        digits++;
+    }
+    return digits;
+}
+
+static uint32_t multiplicative_hash(const uint16_t key, const size_t size) {
+    const unsigned long long A = 2654435769U; // Knuth's multiplicative constant. See https://gist.github.com/badboy/6267743.
+    unsigned long long hash = key * A;
+    return (hash >> (32 - num_digits(size))) % size;
+}
+
+static bool key_equals(const uint16_t key1, const uint16_t key2){
+    return key1 == key2;
 }
