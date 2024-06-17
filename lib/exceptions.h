@@ -1,6 +1,6 @@
 /**
  * \file        exceptions.h
- * \details     Macros for OOP exceptions-like error handling in C.
+ * \brief       Macros for OOP exceptions-like error handling in C.
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
 */

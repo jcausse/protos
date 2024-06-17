@@ -1,6 +1,6 @@
 /**
  * \file        sockets.c
- * \details     Various socket utilities.
+ * \brief       Various socket utilities.
  * 
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
