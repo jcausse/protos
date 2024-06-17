@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import os
 import argparse
 
@@ -7,6 +9,8 @@ CFLAGS: str = '-std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSI
 
 VALGRIND: str = 'valgrind'
 VALGRIND_VERSION_CMD: str = 'valgrind --version'
+
+LIB_DIR: str = '../src/lib'
 
 
 def parse_arguments():
@@ -27,7 +31,8 @@ def check_valgrind():
 
 
 class Library:
-    def __init__(self, name: str, verbose: bool):
+    def __init__(self, dir: str, name: str, verbose: bool):
+        self.__dir: str = dir
         self.__name: str = name
         self.__verbose: bool = verbose
         self.__source: str = f'{name}.c'
@@ -35,18 +40,19 @@ class Library:
         self.__tester: str = f'{name}_test.c'
         self.__files: list[str] = [self.__source, self.__header, self.__tester]
     
-    def check(self, file_list: list[str]) -> bool:
+    def check(self) -> bool:
+        file_list: list[str] = [f for f in os.listdir(self.__dir) if os.path.isfile(self.__dir + '/' + f)]
         return all(file in file_list for file in self.__files)
     
     def compile(self) -> bool:
-        cmd: str = f"{COMPILER} {CFLAGS} {self.__source} {self.__tester} -o {self.__name}.bin "
+        cmd: str = f"{COMPILER} {CFLAGS} {self.__dir + '/' + self.__source} {self.__dir + '/' + self.__tester} -o {self.__dir + '/' + self.__name}.bin "
         cmd += f"{'' if self.__verbose else ' > /dev/null 2>&1'}"
         if self.__verbose:
             print(cmd)
         return os.system(cmd) == 0
     
     def test(self) -> bool:
-        cmd: str = f"{VALGRIND} -s ./{self.__name}.bin {'' if self.__verbose else ' > /dev/null 2>&1'}"
+        cmd: str = f"{VALGRIND} -s {self.__dir + '/' + self.__name}.bin {'' if self.__verbose else ' > /dev/null 2>&1'}"
         if self.__verbose:
             print(cmd)
         return os.system(cmd) == 0
@@ -67,13 +73,11 @@ def test_all():
     for i in range(len(libraries)):
         libraries[i] = libraries[i].strip()
     
-    file_list: list[str] = [f for f in os.listdir('.') if os.path.isfile(f)]
-    
     for lib_name in libraries:
         if lib_name.startswith('#'):
             continue
-        lib = Library(lib_name, args.verbose)
-        if lib.check(file_list) is False:
+        lib = Library(LIB_DIR, lib_name, args.verbose)
+        if lib.check() is False:
             print(f'Missing files for library: {lib_name}')
             continue
         if lib.compile() is False:
@@ -88,7 +92,7 @@ def test_all():
         if args.verbose:
             print()
 
-    os.system('rm ./*.bin')
+    os.system('rm ' + LIB_DIR + '/*.bin')
 
 
 if __name__ == '__main__':
