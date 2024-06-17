@@ -1,3 +1,16 @@
+/**
+ * \file        selector.c
+ * \details     Selector allows monitoring of multiple file descriptors at
+ *              the same time, useful for non-blocking socket applications.
+ * 
+ * \note        HashMap library is required.
+ * \note        LinkedList library is required.
+ * \note        Exceptions header file is required.
+ * 
+ * \date        June, 2024
+ * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
+*/
+
 #include "selector.h"
 
 #define NO_TYPE -1
