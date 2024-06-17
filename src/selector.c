@@ -1,5 +1,8 @@
 #include "selector.h"
 
+#define NO_TYPE -1
+#define NO_DATA NULL
+
 /*************************************************************************/
 /* Private data structures                                               */
 /*************************************************************************/
@@ -13,14 +16,22 @@ typedef struct _Selector_t {
 
     int             maxfd;          // Greatest file descriptor number (of both read an write sets).
 
-    HashMap         fd_types;     // HashMap containing all file descriptor types.
-    HashMap         fd_data;      // HashMap containing all file descriptor data pointers.
+    HashMap         fd_types;       // HashMap containing all file descriptor types.
+    HashMap         fd_data;        // HashMap containing all file descriptor data pointers.
 
     SelectorDataCleanupCallback data_free_fn; // Callback used for freeing file descriptor associated data.
 
     bool            use_timeout;    // Indicates whether the timeout should be passed to select (2) or NULL.
     struct timeval  timeout;        // Timeout used for select (2).
+
+    LinkedList      read_ready;     // List of fds ready for a READ operation after a Selector_select call.
+    LinkedList      write_ready;    // List of fds ready for a WRITE operation after a Selector_select call.
 } _Selector_t;
+
+struct _LListArg {
+    fd_set *    set;
+    LinkedList  list;
+};
 
 /*************************************************************************/
 /* Private functions                                                     */
@@ -28,7 +39,7 @@ typedef struct _Selector_t {
 
 /**
  * \brief       Compare an integer *current* with another *candidate* and save
- *              the greater value to *current*.
+ *              the greater value (plus 1) to *current*.
  * 
  * \param[in out] current       Current maximum value.
  * \param[in]     candidate     Candidate to maximum value.
@@ -43,6 +54,42 @@ static inline void set_if_greater(int * const current, int candidate);
  * \return      Boolean value: true if invalid, false otherwise.
  */
 static inline bool is_invalid_mode(uint32_t mode);
+
+/**
+ * \brief       Callback used to create a LinkedList with all file descriptors
+ *              ready after a select (2) operation. This list is created from
+ *              the list of all available file descriptors, and the fd_set
+ *              containing all ready file descriptors.
+ * 
+ * \param[in] fd    The file descriptor to add to the list if is present in the fd_set.
+ * \param[in] arg   The argument passed to LinkedList_foreach. It is a structure
+ *                  _LListArg that contains the fd_set with all ready file descriptors,
+ *                  and a reference to the target list.
+ */
+static void activity_list_creator(int fd, void * arg);
+
+/**
+ * \brief       Get the next file descriptor available for a READ / WRITE operation.
+ *              This behaviour is determined by the LinkedList passed as a parameter (for
+ *              instance, if the list is self->read_ready, this function returns the next
+ *              fd that is available for reading).
+ * 
+ * \param[in]  self     The selector itself.
+ * \param[in]  list     The LinkedList to take the next fd from.
+ * \param[out] type     A pointer where to store the returned file descriptor's associated type.
+ * \param[out] data     A pointer where to store the returned file descriptor's associated data.
+ * 
+ * \return      Returns the next file descriptor that is ready, or SELECTOR_NO_FD if there is no
+ *              file descriptor available for that operation.
+ */
+static int _Selector_next(Selector const self, LinkedList list, int * type, void ** data);
+
+/**
+ * \brief       Callback to free memory from the *type* HashMap. It is used to call SELECTOR_FREE.
+ * 
+ * \param[in] ptr       Pointer to data to be free'd.
+ */
+static void _Selector_free_cb(void * ptr);
 
 /*************************************************************************/
 /* HashMap callbacks                                                     */
@@ -65,16 +112,20 @@ Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_f
     }
     Selector self = NULL;
     TRY{
-        THROW_IF((self = SELECTOR_CALLOC(1, sizeof(_Selector_t))) == NULL);
-        THROW_IF((self->read_fds = LinkedList_create()) == NULL);
-        THROW_IF((self->write_fds = LinkedList_create()) == NULL);
-        THROW_IF((self->fd_types = HashMap_create(multiplicative_hash, key_equals)) == NULL);
-        THROW_IF((self->fd_data = HashMap_create(multiplicative_hash, key_equals)) == NULL);
+        THROW_IF((self              = SELECTOR_CALLOC(1, sizeof(_Selector_t))        ) == NULL);
+        THROW_IF((self->read_fds    = LinkedList_create()                            ) == NULL);
+        THROW_IF((self->write_fds   = LinkedList_create()                            ) == NULL);
+        THROW_IF((self->read_ready  = LinkedList_create()                            ) == NULL);
+        THROW_IF((self->write_ready = LinkedList_create()                            ) == NULL);
+        THROW_IF((self->fd_types    = HashMap_create(multiplicative_hash, key_equals)) == NULL);
+        THROW_IF((self->fd_data     = HashMap_create(multiplicative_hash, key_equals)) == NULL);
     }
     CATCH{
         if (self != NULL){
             LinkedList_cleanup(self->read_fds);     // NULL-safe
             LinkedList_cleanup(self->write_fds);    // NULL-safe
+            LinkedList_cleanup(self->read_ready);   // NULL-safe
+            LinkedList_cleanup(self->write_ready);  // NULL-safe
             HashMap_cleanup(self->fd_types, NULL);  // NULL-safe
             HashMap_cleanup(self->fd_data, NULL);   // NULL-safe
         }
@@ -88,6 +139,8 @@ Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_f
         self->use_timeout = true;
         self->timeout.tv_sec = timeout;
     }
+    self->read_ready  = NULL;
+    self->write_ready = NULL;
     return self;
 }
 
@@ -269,32 +322,87 @@ SelectorErrors Selector_remove(Selector const self,
 }
 
 SelectorErrors Selector_select(Selector const self){
-    // TODO
+    /* Check if a valid Selector has been received */
+    if (self == NULL){
+        return SELECTOR_INVALID;
+    }
+
+    /* Clear the ready lists */
+    LinkedList_clear(self->read_ready);
+    LinkedList_clear(self->write_ready);
+
+    /* Create a copy of the file descriptor sets and the timeout structure */
+    fd_set readers, writers;
+    struct timeval timeout;
+    SELECTOR_MEMCPY(&readers, &(self->read_set),    sizeof(fd_set));
+    SELECTOR_MEMCPY(&writers, &(self->write_set),   sizeof(fd_set));
+    if (self->use_timeout){
+        SELECTOR_MEMCPY(&timeout, &(self->timeout),     sizeof(struct timeval));
+    }
+
+    /* Create a struct _LListArg to hold needed arguments for LinkedList_foreach */
+    struct _LListArg arg;
+
+    /* Perform a select (2) operation */
+    int activity;
+    TRY{
+        THROW_IF(-1 == (activity = 
+            select(
+                self->maxfd, 
+                &readers, 
+                &writers, 
+                NULL, 
+                self->use_timeout ? &timeout : NULL
+            )
+        ));
+    }
+    CATCH{
+        return SELECTOR_SELECT_ERR;
+    }
+
+    /* Populate read_ready with all file descriptors from read_fds that are ready for reading */
+    arg.set  = &readers;
+    arg.list = self->read_ready;
+    LinkedList_foreach(&(self->read_fds),  activity_list_creator, (void *) &arg);
+
+    /* Populate write_ready with all file descriptors from write_fds that are ready for writing */
+    arg.set  = &writers;
+    arg.list = self->write_ready;
+    LinkedList_foreach(&(self->write_fds), activity_list_creator, (void *) &arg);
+    
     return SELECTOR_OK;
 }
 
-bool Selector_read_has_next(Selector const self){
-    // TODO
-    return false;
+int Selector_read_next(Selector const self, int * type, void ** data){
+    if (self == NULL){
+        return SELECTOR_INVALID;
+    }
+    return _Selector_next(self, self->read_ready, type, data);
 }
 
-SelectorErrors Selector_read_next(Selector const self, int * fd, int * type, void ** data){
-    // TODO
-    return SELECTOR_OK;
-}
-
-bool Selector_write_has_next(Selector const self){
-    // TODO
-    return false;
-}
-
-SelectorErrors Selector_write_next(Selector const self, int * fd, int * type, void ** data){
-    // TODO
-    return SELECTOR_OK;
+int Selector_write_next(Selector const self, int * type, void ** data){
+    if (self == NULL){
+        return SELECTOR_INVALID;
+    }
+    return _Selector_next(self, self->write_ready, type, data);
 }
 
 void Selector_cleanup(Selector self){
-    // TODO
+    if (self == NULL){
+        return;
+    }
+
+    /* Clear LinkedLists */
+    LinkedList_cleanup(self->read_fds);
+    LinkedList_cleanup(self->write_fds);
+    LinkedList_cleanup(self->read_ready);
+    LinkedList_cleanup(self->write_ready);
+
+    /* Clear HashMaps */
+    HashMap_cleanup(self->fd_types, _Selector_free_cb);
+    HashMap_cleanup(self->fd_data, self->data_free_fn);
+
+    SELECTOR_FREE(self);
 }
 
 /*************************************************************************/
@@ -302,8 +410,8 @@ void Selector_cleanup(Selector self){
 /*************************************************************************/
 
 static inline void set_if_greater(int * const current, int candidate){
-    if (candidate > (* current)){
-        * current = candidate;
+    if (candidate >= (* current)){
+        * current = candidate + 1;
     }
 }
 
@@ -335,4 +443,46 @@ static uint32_t multiplicative_hash(const uint16_t key, const size_t size) {
 
 static bool key_equals(const uint16_t key1, const uint16_t key2){
     return key1 == key2;
+}
+
+static void activity_list_creator(int fd, void * arg){
+    struct _LListArg * arg_cast = (struct _LListArg *) arg;
+    fd_set * set = arg_cast->set;
+    LinkedList list = arg_cast->list;
+
+    if (FD_ISSET(fd, set)){
+        LinkedList_append(list, fd);  // Ignores LINKEDLIST_NO_MEMORY
+    }
+}
+
+static int _Selector_next(Selector const self, LinkedList list, int * type, void ** data){
+    int fd;
+    int fd_type, * fd_type_ptr;
+    void * fd_data;
+
+    /* Attempt to get the next available fd, and return SELECTOR_NO_FD if no fd is ready */
+    if (LinkedList_shift(list, &fd) == LINKEDLIST_EMPTY){
+        return SELECTOR_NO_FD;
+    }
+
+    /* Attempt to get the associated type */
+    if (HashMap_peek(self->fd_types, fd, (void *)(&fd_type_ptr)) == HASHMAP_KEY_NOT_FOUND){
+        fd_type = NO_TYPE;
+    }
+    else{
+        fd_type = * fd_type_ptr;
+    }
+
+    /* Attempt to get the associated data */
+    if (HashMap_peek(self->fd_data, fd, &fd_data) == HASHMAP_KEY_NOT_FOUND){
+        fd_data = NO_DATA;
+    }
+
+    * type = fd_type;
+    * data = fd_data;
+    return fd;
+}
+
+static void _Selector_free_cb(void * ptr){
+    SELECTOR_FREE(ptr);
 }
