@@ -1,68 +1,19 @@
-#include <stdio.h>     /* for printf */
-#include <stdlib.h>    /* for exit */
-#include <limits.h>    /* LONG_MIN et al */
-#include <string.h>    /* memset */
-#include <errno.h>
-#include <getopt.h>
+/**
+ * \file        args.c
+ * \brief       Parse command-line arguments.
+ */
 
 #include "args.h"
 
-static unsigned short
-port(const char *s) {
-     char *end     = 0;
-     const long sl = strtol(s, &end, 10);
+#define PORT_MAX 65535
 
-     if (end == s|| '\0' != *end
-        || ((LONG_MIN == sl || LONG_MAX == sl) && ERANGE == errno)
-        || sl < 0 || sl > USHRT_MAX) {
-         fprintf(stderr, "port should in in the range of 1-65536: %s\n", s);
-         exit(1);
-         return 1;
-     }
-     return (unsigned short)sl;
-}
+/*************************************************************************/
+/* Public functions                                                      */
+/*************************************************************************/
 
-static void
-user(char *s, struct users *user) {
-    char *p = strchr(s, ':');
-    if(p == NULL) {
-        fprintf(stderr, "password not found\n");
-        exit(1);
-    } else {
-        *p = 0;
-        p++;
-        user->name = s;
-        user->pass = p;
-    }
 
-}
-
-static void
-version(void) {
-    fprintf(stderr, "socks5v version 0.0\n"
-                    "ITBA Protocolos de Comunicación 2020/1 -- Grupo X\n"
-                    "AQUI VA LA LICENCIA\n");
-}
-
-static void
-usage(const char *progname) {
-    fprintf(stderr,
-        "Usage: %s [OPTION]...\n"
-        "\n"
-        "   -h               Imprime la ayuda y termina.\n"
-        "   -l <SOCKS addr>  Dirección donde servirá el proxy SOCKS.\n"
-        "   -L <conf  addr>  Dirección donde servirá el servicio de management.\n"
-        "   -p <SOCKS port>  Puerto entrante conexiones SOCKS.\n"
-        "   -P <conf port>   Puerto entrante conexiones configuracion\n"
-        "   -u <name>:<pass> Usuario y contraseña de usuario que puede usar el proxy. Hasta 10.\n"
-        "   -v               Imprime información sobre la versión versión y termina.\n"
-        "\n",
-        progname);
-    exit(1);
-}
-
-void 
-parse_args(const int argc, char **argv, struct socks5args *args) {
+// TODO REFACTOR
+void parse_args(const int argc, char **argv, struct socks5args *args) {
     memset(args, 0, sizeof(*args)); // sobre todo para setear en null los punteros de users
 
     args->socks_addr = "0.0.0.0";
@@ -133,3 +84,59 @@ parse_args(const int argc, char **argv, struct socks5args *args) {
         exit(1);
     }
 }
+
+/*************************************************************************/
+/* Private functions                                                     */
+/*************************************************************************/
+
+static void usage(const char *progname) {
+    fprintf(stderr,
+        "Usage: %s [OPTION]...\n"
+        "\n"
+        "   -h               Print this help message and exit.\n"
+        /*"   -l <SOCKS addr> Dirección donde servirá el proxy SOCKS.\n"*/
+        /*"   -L <conf  addr> Dirección donde servirá el servicio de management.\n"*/
+        "   -p <SMTPD PORT>  SMTP server port.\n"
+        "   -c <CONF PORT >  Configuration port.\n"
+        "   -d <MAIL DIR  >  Directory path where received mail will be saved.\n"
+        "   -v               Print version information and exit.\n"
+        "\n",
+        progname);
+    exit(1);
+}
+
+static void version(void) {
+    fprintf(stdout, "%s v%s\n", PRODUCT_NAME, PRODUCT_VERSION);
+    fprintf(stdout, "%s\n", ORGANIZATION);
+
+    fprintf(stdout, "Authors:");
+    unsigned int i = 0;
+    while(team_members_last_names[i] != NULL){
+        fprintf(stdout, "* %5s: %12s, %15s\n",
+            team_members_ids[i],
+            team_members_last_names[i],
+            team_members_first_names[i]
+        )
+    }
+
+    fprintf("Compiled on %s at %s\n", COMPILATION_DATE, COMPILATION_TIME);
+}
+
+static unsigned short port(const char *s) {
+    char * end = NULL;
+    const long sl = strtol(s, &end, 10);
+
+    if (
+            end == s 
+        ||  * end != '\0'
+        ||  ((LONG_MIN == sl || LONG_MAX == sl) && ERANGE == errno)
+        ||  sl < 0 
+        ||  sl > PORT_MAX
+    ) {
+        fprintf(stderr, "Invalid port: not in range [1-65535]: %s\n", s);
+        exit(1);
+    }
+
+    return (unsigned short) sl;
+}
+
