@@ -1,6 +1,6 @@
 /**
  * \file        selector.h
- * \details     Selector allows monitoring of multiple file descriptors at
+ * \brief       Selector allows monitoring of multiple file descriptors at
  *              the same time, useful for non-blocking socket applications.
  * 
  * \note        HashMap library is required.

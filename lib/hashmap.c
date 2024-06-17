@@ -1,3 +1,11 @@
+/**
+ * \file        hashmap.c
+ * \brief       Implementation of a HashMap.
+ * 
+ * \date        May, 2024
+ * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
+*/
+
 #include "hashmap.h"
 
 #define HASHMAP_DEFAULT_HASH_TABLE_SIZE 100

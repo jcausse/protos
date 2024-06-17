@@ -1,6 +1,6 @@
 /**
  * \file        sockets.h
- * \details     Various socket utilities.
+ * \brief       Various socket utilities.
  * 
  * \note        Exceptions header file is required.
  * 

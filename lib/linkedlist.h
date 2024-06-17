@@ -1,6 +1,6 @@
 /**
  * \file        linkedlist.h
- * \details     Create and manage a Linked List of integers.
+ * \brief       Create and manage a Linked List of integers.
  * 
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
