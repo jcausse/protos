@@ -1,6 +1,10 @@
 #ifndef _PARSER_H_
 #define _PARSER_H_
 
+#define ERR -1
+#define TERMINAL -2
+#define SUCCESS 0
+
 /**
  * Basic command enum, it will be used by the client to know how
  * process inner information
@@ -15,7 +19,7 @@ typedef enum Command {
     RSET,
     QUIT,
     NOOP,
-    ERROR
+    ERROR,
 } Command;
 
 typedef struct CommandStructure {
@@ -61,8 +65,21 @@ Parser * initParser(void);
  * parser structure to contain useful info for the server
  * and a status code if the server needs to reply to the
  * client.
+ *
+ * Return values are:
+ * ERR:      Error parsing a command, expect to have a return message
+ *           on the status field
+ *
+ * SUCCESS:  Parse successful, should check the command structure field
+ *           to see what data was extracted from the command, and return
+ *           to the client the status string (if any, with the DATA
+ *           content the client should not receive any response until
+ *           it finishes its input with <CLRF>.<CLRF>).
+ *
+ * TERMINAL: The parser has reached a terminal status, should use this
+ *           value to know when to close the connection with the client
  */
-void parseCmd(Parser * parser, const char * command);
+int parseCmd(Parser * parser, const char * command);
 
 /**
  * Destroys the parser, this should be done iif the server is
