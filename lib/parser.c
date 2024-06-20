@@ -9,10 +9,12 @@
 #define WELCOME_MSG "Welcome to the SMTP Server!\r\n"
 #define HELO_GREETING_MSG "250-%s Hello %s\r\n"
 #define EHLO_GREETING_MSG "250-%s Hello %s\r\n"
+
 #define SYNTAX_ERROR_MSG "500 Syntax error\r\n"
 #define PARAM_SYNTAX_ERROR_MSG "501 Syntax error in parameters or arguments\r\n"
-#define NEED_MAIL_FROM "503-5.5.1 Need MAIL FROM\r\n"
-#define NEED_RCPT_TO "503-5.5.1 Need RCPT\r\n"
+#define NEED_MAIL_FROM "503-5.5.1 Bad Sequence of Commands. Need MAIL FROM\r\n"
+#define NEED_RCPT_TO "503-5.5.1 Bad Sequence of Commands. Need RCPT\r\n"
+#define ALREADY_SIGNED "503-5.5.1 Bad Sequence of Commands. You are already identified\r\n"
 #define ENTER_DATA_MSG "354 Start mail input; end with <CLRF>.<CLRF>\r\n"
 #define QUIT_MSG "221 %s Service closing transmission channel\r\n"
 #define GENERIC_OK_MSG "250 OK\r\n"
@@ -221,21 +223,41 @@ struct StateMachine {
 };
 
 static int welcomeTransition(Parser * parser, const char * command) {
-    if(strncmp(command, HELO_CMD, CMD_LEN) && command[CMD_LEN+1] == SPACE) {
+    if(parser->status != NULL) free(parser->status);
+
+    if(strncmp(command, HELO_CMD, CMD_LEN) && command[CMD_LEN] == SPACE) {
         parser->machine->currentState = &welcomeHeloDomainState;
         const char * helloDomain = command + CMD_LEN + 1;
         return welcomeHeloDomainTransition(parser, helloDomain);
     }
-    else if(strncmp(command, EHLO_CMD, CMD_LEN) && command[CMD_LEN+1] == SPACE){
+    else if(strncmp(command, EHLO_CMD, CMD_LEN) && command[CMD_LEN] == SPACE){
         parser->machine->currentState = &welcomeEhloDomainState;
         const char * ehloDomain = command + CMD_LEN + 1;
         return welcomeDomainTransition(parser, ehloDomain);
     }
-    else {
-        parser->status = strdup(SYNTAX_ERROR_MSG);
-        parser->structure = NULL;
-        return ERR;
+    else if(strncmp(command, RSET_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &welcomeState;
+        parser->status = strdup(GENERIC_OK_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return SUCCESS;
     }
+    else if(strncmp(command, NOOP_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &welcomeState;
+        parser->status = strdup(GENERIC_OK_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return SUCCESS;
+    }
+    else if(strncmp(command, QUIT_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &quitState;
+        parser->status = strdup(QUIT_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return TERMINAL;
+    }
+
+    parser->machine->currentState = &welcomeState;
+    parser->status = strdup(SYNTAX_ERROR_MSG);
+    if(parser->structure != NULL) freeStruct(parser);
+    return ERR;
 }
 
 static int welcomeHeloDomainTransition(Parser * parser, const char * command) {
@@ -316,8 +338,110 @@ static int welcomeDomainTransition(Parser * parser, const char * command) {
     return SUCCESS;
 }
 
-static int heloTransition(Parser * parser, const char * command);
-static int ehloTransition(Parser * parser, const char * command);
+static int heloTransition(Parser * parser, const char * command) {
+    if(parser->status != NULL) free(parser->status);
+
+    if(strncmp(command, MAIL_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
+        const char * mailArgs = command + CMD_LEN + 1;
+        parser->machine->currentState = &heloMailFromState;
+        return heloMailFromTransition(parser, mailArgs);
+    }
+    else if(strncmp(command, RCPT_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
+        parser->machine->currentState = &heloState;
+        parser->status = strdup(NEED_MAIL_FROM);
+        if(parser->structure != NULL) freeStruct(parser);
+        return ERR;
+    }
+    else if(strncmp(command, DATA_CMD, CMD_LEN) && command[CMD_LEN] == '\r'){
+        parser->machine->currentState = &heloState;
+        parser->status = strdup(NEED_RCPT_TO);
+        if(parser->structure != NULL) freeStruct(parser);
+        return ERR;
+    }
+    else if(strncmp(command, RSET_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &heloState;
+        parser->status = strdup(GENERIC_OK_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return SUCCESS;
+    }
+    else if(strncmp(command, NOOP_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &heloState;
+        parser->status = strdup(GENERIC_OK_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return SUCCESS;
+    }
+    else if(strncmp(command, QUIT_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &quitState;
+        parser->status = strdup(QUIT_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return TERMINAL;
+    }
+    else if((strncmp(command, HELO_CMD, CMD_LEN) && command[CMD_LEN] == ' ')
+         || (strncmp(command, EHLO_CMD, CMD_LEN) && command[CMD_LEN] == ' ')) {
+        parser->machine->currentState = &heloState;
+        parser->status = strdup(ALREADY_SIGNED);
+        if(parser->structure != NULL) freeStruct(parser);
+        return ERR;
+    }
+
+    parser->machine->currentState = &heloState;
+    parser->status = strdup(SYNTAX_ERROR_MSG);
+    if(parser->structure != NULL) freeStruct(parser);
+    return ERR;
+}
+
+static int ehloTransition(Parser * parser, const char * command) {
+    if(parser->status != NULL) free(parser->status);
+
+    if(strncmp(command, MAIL_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
+        const char * mailArgs = command + CMD_LEN + 1;
+        parser->machine->currentState = &mailFromState;
+        return mailFromTransition(parser, mailArgs);
+    }
+    else if(strncmp(command, RCPT_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
+        parser->machine->currentState = &ehloState;
+        parser->status = strdup(NEED_MAIL_FROM);
+        if(parser->structure != NULL) freeStruct(parser);
+        return ERR;
+    }
+    else if(strncmp(command, DATA_CMD, CMD_LEN) && command[CMD_LEN] == '\r'){
+        parser->machine->currentState = &ehloState;
+        parser->status = strdup(NEED_RCPT_TO);
+        if(parser->structure != NULL) freeStruct(parser);
+        return ERR;
+    }
+    else if(strncmp(command, RSET_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &ehloState;
+        parser->status = strdup(GENERIC_OK_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return SUCCESS;
+    }
+    else if(strncmp(command, NOOP_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &ehloState;
+        parser->status = strdup(GENERIC_OK_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return SUCCESS;
+    }
+    else if(strncmp(command, QUIT_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = &quitState;
+        parser->status = strdup(QUIT_MSG);
+        if(parser->structure != NULL) freeStruct(parser);
+        return TERMINAL;
+    }
+    else if((strncmp(command, HELO_CMD, CMD_LEN) && command[CMD_LEN] == ' ')
+         || (strncmp(command, EHLO_CMD, CMD_LEN) && command[CMD_LEN] == ' ')) {
+        parser->machine->currentState = &ehloState;
+        parser->status = strdup(ALREADY_SIGNED);
+        if(parser->structure != NULL) freeStruct(parser);
+        return ERR;
+    }
+
+    parser->machine->currentState = &ehloState;
+    parser->status = strdup(SYNTAX_ERROR_MSG);
+    if(parser->structure != NULL) freeStruct(parser);
+    return ERR;
+}
+
 static int mailFromTransition(Parser * parser, const char * command);
 static int heloMailFromTransition(Parser * parser, const char * command);
 static int heloRcptToTransition(Parser * parser, const char * command);
@@ -397,14 +521,19 @@ int parseCmd(Parser * parser, const char * command) {
     if(parser == NULL || parser->machine == NULL) return TERMINAL;
     switch(parser->machine->currentState->state){
         case WELCOME: return welcomeTransition(parser, command);
+
         case HELO_GREETING: return heloTransition(parser, command);
         case GREETING: return ehloTransition(parser, command);
+
         case HELO_MAIL_FROM_OK: return heloMailFromTransition(parser, command);
         case MAIL_FROM_OK: return mailFromTransition(parser, command);
+
         case HELO_RCPT_TO_OK: return heloRcptToTransition(parser, command);
         case RCPT_TO_OK: return rcptToTransition(parser, command);
+
         case HELO_DATA_OK: return heloDataTransition(parser, command);
         case DATA_OK: return dataTransition(parser, command);
+
         case QUIT_ST: return quitTransition(parser, command);
         default: return TERMINAL; // Unexpected parsing error, should never get here
     }
