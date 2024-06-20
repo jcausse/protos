@@ -15,8 +15,8 @@ SlaveInfo transform(char * input,const char* command){
             // Redirecciona las entradas/salidas estándar según sea necesario
         dup2(slave.toSlavePipe[0], STDIN_FILENO);
         dup2(slave.fromSlavePipe[1], STDOUT_FILENO);
-
-        execve(command, input, NULL);
+        char * args[2] = {command,input};
+        execve("./slave.c",args, NULL);
 
         perror("execve");
         exit(EXIT_FAILURE);

@@ -1,6 +1,7 @@
 #include "transformer_creator.h"
 #define MAX_MAILS 100
 #define tkn ":"
+#define NO_ACTIVE_SLAVE -2
 typedef struct{
     SlaveInfo slave;
     int cID;
