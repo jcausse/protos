@@ -7,9 +7,6 @@
 #define WELCOME_MSG "Welcome to the SMTP Server!"
 #define HELO_GREETING_MSG "250-%s Hello %s"
 #define EHLO_GREETING_MSG "250-%s Hello %s\n250-AUTH"
-#define SERVICE_NOT_AVAILABLE_MSG "421 %s Service not available, closing transmission channel"
-#define NEED_AUTH_MSG "530-5.5.1 Authentication Required"
-#define AUTH_OK_MSG "235-2.7.0 Authentication Succeded"
 #define SYNTAX_ERROR_MSG "500 Syntax error"
 #define PARAM_SYNTAX_ERROR_MSG "501 Syntax error in parameters or arguments"
 #define NEED_MAIL_FROM "503-5.5.1 Need MAIL FROM"
@@ -28,7 +25,6 @@
 
 #define HELO_CMD "HELO "
 #define EHLO_CMD "EHLO "
-#define AUTH_CMD "AUTH PLAIN "
 #define MAIL_FROM_CMD "MAIL FROM: <"
 #define RCPT_TO_CMD "RCPT TO: <"
 #define CLOSE_RCPT_MAIL ">"
@@ -38,9 +34,8 @@
 #define NOOP_CMD "NOOP"
 #define QUIT_CMD "QUIT"
 
-#define STATE_CMD_ARR_SIZE 9
+#define STATE_CMD_ARR_SIZE 8
 #define NEXT_STATE_ARR_SIZE STATE_CMD_ARR_SIZE
-#define ERR_STATE_SIZE 1
 
 /**
  * States available in the server, this will affect how the parser
@@ -52,10 +47,6 @@ typedef enum States {
     EHLO_DOMAIN,
     HELO_GREETING,
     EHLO_GREETING,
-    SERVICE_NOT_AVAILABLE, // Should close transmission channel
-    NEED_AUTH,
-    AUTH_PSSW,
-    AUTH_OK,
     MAIL_FROM_INPUT,
     MAIL_FROM_OK,
     RCPT_TO_INPUT,
@@ -75,7 +66,7 @@ struct State {
     States state;
     char * cmdExpected[STATE_CMD_ARR_SIZE];
     struct State * nextState[NEXT_STATE_ARR_SIZE];
-    struct State * errState[ERR_STATE_SIZE];
+    struct State * errState;
     char * defaultMsg;
 };
 
@@ -88,88 +79,107 @@ static struct State quitState = {
     .defaultMsg  = QUIT_MSG
 };
 
-static struct State serviceNotAvailableState = {
-
-};
-
 static struct State dataState = {
     .state       = DATA_OK,
-    .cmdExpected = { END_DATA_CMD,  ANY_MSG,    NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .nextState   = { &ehloState,    &dataState, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .cmdExpected = { END_DATA_CMD,  ANY_MSG,    NULL, NULL, NULL, NULL, NULL, NULL },
+    .nextState   = { &ehloState,    &dataState, NULL, NULL, NULL, NULL, NULL, NULL },
     .errState    = NULL,
     .defaultMsg  = ENTER_DATA_MSG
 };
 
 static struct State rcptSuccessState = {
     .state       = RCPT_TO_OK,
-    .cmdExpected = { DATA_CMD,      QUIT_CMD,   RSET_CMD,   NOOP_CMD,           MAIL_FROM_CMD,      RCPT_TO_CMD,        HELO_CMD,           EHLO_CMD,           NULL },
-    .nextState   = { &dataState,    &quitState, &ehloState, &rcptSuccessState,  &rcptSuccessState,  &rcptSuccessState,  &rcptSuccessState,  &rcptSuccessState,  NULL },
+    .cmdExpected = { DATA_CMD,      QUIT_CMD,   RSET_CMD,   NOOP_CMD,           MAIL_FROM_CMD,      RCPT_TO_CMD,        HELO_CMD,           EHLO_CMD,         },
+    .nextState   = { &dataState,    &quitState, &ehloState, &rcptSuccessState,  &rcptSuccessState,  &rcptSuccessState,  &rcptSuccessState,  &rcptSuccessState },
     .errState    = NULL,
     .defaultMsg  = GENERIC_OK_MSG
 };
 
 static struct State rcptToState = {
     .state       = RCPT_TO_INPUT,
-    .cmdExpected = { ANY_MSG,           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .nextState   = { &rcptSuccessState, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .errState    = { &mailSuccessState },
+    .cmdExpected = { ANY_MSG,           NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .nextState   = { &rcptSuccessState, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .errState    = &mailSuccessState,
     .defaultMsg  = NULL,
 };
 
 static struct State mailSuccessState = {
     .state       = MAIL_FROM_OK,
-    .cmdExpected = { RCPT_TO_CMD,   QUIT_CMD,   RSET_CMD,   NOOP_CMD,           DATA_CMD,           MAIL_FROM_CMD,      EHLO_CMD,           HELO_CMD,           NULL },
-    .nextState   = { &rcptToState,  &quitState, &ehloState, &mailSuccessState,  &mailSuccessState,  &mailSuccessState,  &mailSuccessState,  &mailSuccessState,  NULL },
+    .cmdExpected = { RCPT_TO_CMD,   QUIT_CMD,   RSET_CMD,   NOOP_CMD,           DATA_CMD,           MAIL_FROM_CMD,      EHLO_CMD,           HELO_CMD,         },
+    .nextState   = { &rcptToState,  &quitState, &ehloState, &mailSuccessState,  &mailSuccessState,  &mailSuccessState,  &mailSuccessState,  &mailSuccessState },
     .errState    = NULL,
     .defaultMsg  = GENERIC_OK_MSG
 };
 
 static struct State mailFromState = {
     .state       = MAIL_FROM_INPUT,
-    .cmdExpected = { ANY_MSG,           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .nextState   = { &mailSuccessState, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .errState    = { &authSuccessState },
+    .cmdExpected = { ANY_MSG,           NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .nextState   = { &mailSuccessState, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .errState    = ,
     .defaultMsg  = NULL
-};
-
-static struct State authSuccessState = {
-    .state       = AUTH_OK,
-    .cmdExpected = { MAIL_FROM_CMD,     QUIT_CMD,   NOOP_CMD,           RSET_CMD,   RCPT_TO_CMD,    DATA_CMD,   EHLO_CMD,           HELO_CMD,           NULL },
-    .nextState   = { &mailFromState,    &quitState, &authSuccessState,  &ehloState, NULL,           NULL,       &authSuccessState,  &authSuccessState,  NULL },
-    .errState    = NULL,
-    .defaultMsg  = AUTH_OK_MSG
-};
-
-static struct State authState = {
-    .state       = AUTH_PSSW,
-    .cmdExpected = { ANY_MSG,              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .nextState   = { &authSuccessState,    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .errState    = NULL
-    .defaultMsg  = NULL
-};
-
-
-static struct State heloState = {
-    .state       = HELO_GREETING,
-    .cmdExpected = { QUIT_CMD,   NOOP_CMD,   RSET_CMD,   MAIL_FROM_CMD,  RCPT_TO_CMD,    DATA_CMD,   HELO_CMD,      EHLO_CMD,   NULL },
-    .nextState   = { &quitState, &heloState, &heloState, &heloState,     &heloState,     &heloState, &heloState,    &heloState, NULL },
-    .errState    = { &serviceNotAvailableState },
-    .defaultMsg  = HELO_GREETING_MSG
 };
 
 static struct State ehloState = {
     .state       = EHLO_GREETING,
-    .cmdExpected = { AUTH_CMD,     MAIL_FROM_CMD,  RCPT_TO_CMD,    DATA_CMD,   QUIT_CMD,   NOOP_CMD,   RSET_CMD,    EHLO_CMD,   HELO_CMD},
-    .nextState   = { &authState,   &ehloState,     &ehloState,     &ehloState, &quitState, &ehloState, &ehloState,  &ehloState, &ehloState },
+    .cmdExpected = { MAIL_FROM_CMD,  RCPT_TO_CMD,    DATA_CMD,   QUIT_CMD,   NOOP_CMD,   RSET_CMD,    EHLO_CMD,   HELO_CMD   },
+    .nextState   = { &ehloState,     &ehloState,     &ehloState, &quitState, &ehloState, &ehloState,  &ehloState, &ehloState },
     .errState    = NULL,
     .defaultMsg  = EHLO_GREETING_MSG,
+};
+
+static struct State heloDataState = {
+    .state       = DATA_OK,
+    .cmdExpected = { END_DATA_CMD,  ANY_MSG,    NULL, NULL, NULL, NULL, NULL, NULL },
+    .nextState   = { &heloState,    &dataState, NULL, NULL, NULL, NULL, NULL, NULL },
+    .errState    = NULL,
+    .defaultMsg  = ENTER_DATA_MSG
+};
+
+static struct State heloRcptSuccessState = {
+    .state       = RCPT_TO_OK,
+    .cmdExpected = { DATA_CMD,          QUIT_CMD,   RSET_CMD,   NOOP_CMD,               MAIL_FROM_CMD,          RCPT_TO_CMD,            HELO_CMD,               EHLO_CMD              },
+    .nextState   = { &heloDataState,    &quitState, &heloState, &heloRcptSuccessState,  &heloRcptSuccessState,  &heloRcptSuccessState,  &heloRcptSuccessState,  &heloRcptSuccessState },
+    .errState    = NULL,
+    .defaultMsg  = GENERIC_OK_MSG
+};
+
+static struct State heloRcptToState = {
+    .state       = RCPT_TO_INPUT,
+    .cmdExpected = { ANY_MSG,               NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .nextState   = { &heloRcptSuccessState, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .errState    = &heloMailSuccessState,
+    .defaultMsg  = NULL,
+};
+
+static struct State heloMailSuccessState = {
+    .state       = MAIL_FROM_OK,
+    .cmdExpected = { RCPT_TO_CMD,       QUIT_CMD,   RSET_CMD,   NOOP_CMD,               DATA_CMD,               MAIL_FROM_CMD,          EHLO_CMD,               HELO_CMD,             },
+    .nextState   = { &heloRcptToState,  &quitState, &heloState, &heloMailSuccessState,  &heloMailSuccessState,  &heloMailSuccessState,  &heloMailSuccessState,  &heloMailSuccessState },
+    .errState    = NULL,
+    .defaultMsg  = GENERIC_OK_MSG
+};
+
+static struct State heloMailFromState = {
+    .state       = MAIL_FROM_INPUT,
+    .cmdExpected = { ANY_MSG,               NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .nextState   = { &heloMailSuccessState, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .errState    = ,
+    .defaultMsg  = NULL
+};
+
+static struct State heloState = {
+    .state       = HELO_GREETING,
+    .cmdExpected = { MAIL_FROM_CMD,      QUIT_CMD,   NOOP_CMD,   RSET_CMD,   RCPT_TO_CMD,   DATA_CMD,   HELO_CMD,   EHLO_CMD  },
+    .nextState   = { &heloMailFromState, &quitState, &heloState, &heloState, &heloState,    &heloState, &heloState, &heloState },
+    .errState    = NULL,
+    .defaultMsg  = HELO_GREETING_MSG
 };
 
 static struct State welcomeHeloDomainState = {
     .state       = HELO_DOMAIN,
     .cmdExpected = { ANY_MSG,      NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .nextState   = { &ehloState,   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .errState    = { &welcomeState },
+    .nextState   = { &heloState,   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    .errState    = &welcomeState,
     .defaultMsg  = NULL
 };
 
@@ -177,7 +187,7 @@ static struct State welcomeEhloDomainState = {
     .state       = EHLO_DOMAIN,
     .cmdExpected = { ANY_MSG,      NULL, NULL, NULL, NULL, NULL, NULL, NULL },
     .nextState   = { &heloState,   NULL, NULL, NULL, NULL, NULL, NULL, NULL },
-    .errState    = NULL,
+    .errState    = &welcomeState,
     .defaultMsg  = NULL
 };
 
