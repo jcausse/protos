@@ -26,6 +26,7 @@ typedef struct CommandStructure {
     Command cmd;
     union {
         char * ehloDomain;
+        char * heloDomain;
         char * authStr;
         char * mailFromStr;
         char * rcptToStr;
@@ -47,19 +48,28 @@ typedef struct Parser {
     StateMachinePtr machine;
     char * status;
     CommandStructure * structure;
+    char * serverDom;
 } Parser;
 
 /**
- * Initiates the State Machine, needs to be called only once by the server
- * the first time it inits to set all the pointers of the inner structures
- * of the state machine.
+ * Initiates the Regex variables, needs to be called only once by the server
+ * the first time it inits to set all the regex used in the server to parse
+ * all the arguments given by the client.
+ *
+ * Returns:
+ *
+ * SUCCESS if every regex was compiled successfully
+ * ERR if any regex have had any error compiling
+ *
+ * Note: This return value will be useful for debugging if it is any new
+ * addition of possible arguments that can be sent by the client.
  */
-void initStateMachine(void);
+int compileRegexes(void);
 
 /**
  * Allocates memory for the parser
  */
-Parser * initParser(void);
+Parser * initParser(const char * serverDomain);
 
 /**
  * Parses a given string, ended in <CLRF> it will change
