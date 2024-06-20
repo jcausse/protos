@@ -50,6 +50,13 @@ typedef struct Parser {
 } Parser;
 
 /**
+ * Initiates the State Machine, needs to be called only once by the server
+ * the first time it inits to set all the pointers of the inner structures
+ * of the state machine.
+ */
+void initStateMachine(void);
+
+/**
  * Allocates memory for the parser
  */
 Parser * initParser(void);
