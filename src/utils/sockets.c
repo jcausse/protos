@@ -125,3 +125,15 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
     *ipv6_sockfd = ipv6_fd;
     return true;
 }
+
+void safe_close(int fd){
+    errno = 0;
+    if (fd < 0){
+        return;
+    }
+    int ret;
+    do {
+        ret = close(fd);
+    }
+    while (ret != 0 && errno == EINTR);
+}
