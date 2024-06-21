@@ -31,7 +31,6 @@ typedef struct CommandStructure {
     union {
         char * ehloDomain;
         char * heloDomain;
-        char * authStr;
         char * mailFromStr;
         char * rcptToStr;
         char * dataStr;

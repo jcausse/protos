@@ -29,7 +29,7 @@
 
 #define IPV4_REGEX "(\\b25[0-5]|\\b2[0-4][0-9]|\\b[01]?[0-9][0-9]?)(\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 #define IPV6_REGEX "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
-#define DOMAIN_REGEX "^(([a-zA-Z]{1})|([a-zA-Z]{1}[a-zA-Z]{1})|([a-zA-Z]{1}[0-9]{1})|([0-9]{1}[a-zA-Z]{1})|([a-zA-Z0-9][a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]))\\.([a-zA-Z]{2,6}|[a-zA-Z0-9-]{2,30}\\.[a-zA-Z]{2,3})$"
+#define DOMAIN_REGEX "^(((?!-))(xn--|_)?[a-z0-9-]{0,61}[a-z0-9]{1,1}\\.)*(xn--)?([a-z0-9][a-z0-9\\-]{0,60}|[a-z0-9-]{1,30}\\.[a-z]{2,})$"
 #define MAIL_REGEX "^((@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)|(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3},(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)+)?):)?[a-zA-Z0-9]+([._+-][a-zA-Z0-9]+)*@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?$"
 
 /**
@@ -351,7 +351,7 @@ static int vrfyTransition(Parser * parser, const char * command) {
     if(parser->structure != NULL) freeStruct(parser);
 
     char * result = NULL;
-    int res = vrfy(result,  command);
+    int res = vrfy(&result,  command);
     if(res == NONE) {
         parser->status = strdup(VRFY_NOT_FOUND);
         parser->machine->currentState = parser->machine->priorState;
@@ -360,18 +360,14 @@ static int vrfyTransition(Parser * parser, const char * command) {
         return ERR;
     }
     else if(res == SINGLE) {
-        char status[256] = {0};
-        sprintf(status, VRFY_OK_MSG, result);
-        parser->status = strdup(status);
+        parser->status = result;
         parser->machine->currentState = parser->machine->priorState;
         parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
         parser->structure->cmd = VRFY;
         return SUCCESS;
     }
 
-    char status[1024] = {0};
-    sprintf(status, VRFY_AMBIGUOUS_MSG, result);
-    parser->status = strdup(status);
+    parser->status = result;
     parser->machine->currentState = parser->machine->priorState;
     parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
     parser->structure->cmd = VRFY;
@@ -660,10 +656,10 @@ static void freeStruct(Parser * parser) {
  * all the arguments given by the client.
  */
 int compileRegexes(void) {
-    if(!regcomp(&ipv4Regex, IPV4_REGEX, NO_FLAGS)     ||
-       !regcomp(&ipv6Regex, IPV6_REGEX, NO_FLAGS)     ||
-       !regcomp(&domainRegex, DOMAIN_REGEX, NO_FLAGS) ||
-       !regcomp(&mailRegex, MAIL_REGEX, NO_FLAGS))    return ERR;
+    if((regcomp(&ipv4Regex, IPV4_REGEX, NO_FLAGS) != SUCCESS)     ||
+       (regcomp(&ipv6Regex, IPV6_REGEX, NO_FLAGS) != SUCCESS)     ||
+       (regcomp(&domainRegex, DOMAIN_REGEX, NO_FLAGS) != SUCCESS) ||
+       (regcomp(&mailRegex, MAIL_REGEX, NO_FLAGS) != SUCCESS)     ) return ERR;
     return SUCCESS;
 }
 

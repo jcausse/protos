@@ -5,6 +5,6 @@
 #define SINGLE 1
 #define AMBIGUOUS 2
 
-int vrfy(char * res, const char * arg);
+int vrfy(char ** res, const char * arg);
 
 #endif
