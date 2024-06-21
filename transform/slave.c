@@ -9,6 +9,7 @@
 #define SUCCESS "254 \n"
 #define FAILURE "255 \n"
 #define MAX_BUFFER_SIZE 1049
+#define ERR_MSG "Usage: <command> <mail>\n"
 
 static void check_dir(char * dir){
     struct stat st = {0};
@@ -19,13 +20,8 @@ static void check_dir(char * dir){
 
 int transform_mail(char * mail, char * command,char * toSave) {
     char* com = calloc(300,sizeof(char));
-    strcat(com,command);
-    strcat(com," ");
-    strcat(com,mail);
-    strcat(com," > ");
-    strcat(com,toSave);
-    strcat(com," 2> ");
-    strcat(com,"transform.err");
+    snprintf(com, 300, "%s %s > %s 2> transform.err", command, mail, toSave);
+    printf("COM: %s\n",com);
     int retVal = system(com);
     free(com);
     return retVal;  
@@ -33,25 +29,42 @@ int transform_mail(char * mail, char * command,char * toSave) {
 
 int main (int argc, char *argv[]) {
     if (argc < 3) {
-        fprintf(stderr, "Usage: %s <command> <mail>\n", argv[0]);
-        exit(EXIT_FAILURE);
+        write(STDOUT_FILENO, ERR_MSG,strlen(ERR_MSG)+1);
     }
     check_dir(INBOX);
     char * command = argv[1];
     char * mail = malloc(strlen(argv[2]) + 1);
+       if (mail == NULL) {
+        perror("malloc");
+    }
     strcpy(mail, argv[2]);
     
   
     char * user = strtok(mail, "-");
+    if (user == NULL) {
+        write(STDOUT_FILENO, ERR_MSG,strlen(ERR_MSG)+1);
+        free(mail);
+    }
+
     char * aux = strtok(NULL, "-");
+    if (aux == NULL) {
+        write(STDOUT_FILENO, ERR_MSG,strlen(ERR_MSG)+1);
+        free(mail);
+    }
 
     char * toSave= malloc(strlen(INBOX) + strlen(aux) +strlen(user) + 2);
+     if (toSave == NULL) {
+        perror("malloc");
+        free(mail);
+        exit(EXIT_FAILURE);
+    }
     strcpy(toSave, INBOX);
     strcat(toSave, user);
     check_dir(toSave);
     strcat(toSave, "/");
     strcat(toSave, aux);
-
+    char* com = malloc(strlen(argv[2]) + strlen(command) + strlen(toSave) + strlen(" 2> transform.err") + 5);
+    snprintf(com, 300, "%s %s > %s 2> transform.err", command, mail, toSave);
     int transform = transform_mail(argv[2],command,toSave);
     free(toSave);
     if(transform == 0){
@@ -60,34 +73,37 @@ int main (int argc, char *argv[]) {
 
     ssize_t nbytes;
     char inputBuffer[MAX_BUFFER_SIZE];  
-    while ((nbytes = read(STDIN_FILENO, inputBuffer, sizeof(inputBuffer))) > 0) {
-       if (nbytes > MAX_BUFFER_SIZE) {
-            fprintf(stderr, "Input too long\n");
-            continue;
-        }
-
+    while ((nbytes = read(STDIN_FILENO, inputBuffer, sizeof(inputBuffer) - 1)) > 0) {
         inputBuffer[nbytes] = '\0';  
-
         mail = malloc(strlen(inputBuffer) + 1);
         if (mail == NULL) {
             perror("malloc");
             exit(EXIT_FAILURE);
         }
         strcpy(mail, inputBuffer);
+
         user = strtok(mail, "-");
         aux = strtok(NULL, "-");
+        aux[strlen(aux) -1 ] = '\0';
+
         toSave= malloc(strlen(INBOX) + strlen(aux) +strlen(user) + 2);
+        
         strcpy(toSave, INBOX);
         strcat(toSave, user);
         check_dir(toSave);
         strcat(toSave, "/");
         strcat(toSave, aux);
+        inputBuffer[nbytes - 1] = '\0';
+    
         transform = transform_mail(inputBuffer,command,toSave);
         
         free(mail);
+        free(toSave);
         if(transform == 0){
         write(STDOUT_FILENO, SUCCESS, strlen(SUCCESS) + 1);
-        }  // Free the allocated memory for mail after use
+        } else{
+            write(STDOUT_FILENO,FAILURE,strlen(FAILURE)+1);
+        }
     }
     return 0;
 }
