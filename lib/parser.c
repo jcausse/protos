@@ -2,6 +2,7 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <regex.h>
 
 #include "parser.h"
@@ -99,20 +100,21 @@ static regex_t domainRegex;
 static regex_t mailRegex;
 
 // State transition functions
-static int welcomeTransition(Parser * parser, const char * command);
-static int welcomeHeloDomainTransition(Parser * parser, const char * command);
-static int welcomeEhloDomainTransition(Parser * parser, const char * command);
-static int greetingTransition(Parser * parser, const char * command);
-static int mailFromTransition(Parser * parser, const char * command);
-static int mailFromOkTransition(Parser * parser, const char * command);
-static int rcptToTransition(Parser * parser, const char * command);
-static int rcptToOkTransition(Parser * parser, const char * command);
-static int dataTransition(Parser * parser, const char * command);
-static int vrfyTransition(Parser * parser, const char * command);
+static int welcomeTransition(Parser * parser, char * command);
+static int welcomeHeloDomainTransition(Parser * parser, char * command);
+static int welcomeEhloDomainTransition(Parser * parser, char * command);
+static int greetingTransition(Parser * parser, char * command);
+static int mailFromTransition(Parser * parser, char * command);
+static int mailFromOkTransition(Parser * parser, char * command);
+static int rcptToTransition(Parser * parser, char * command);
+static int rcptToOkTransition(Parser * parser, char * command);
+static int dataTransition(Parser * parser, char * command);
+static int vrfyTransition(Parser * parser, char * command);
 
 // Auxiliary function to free the command structure
 static void freeStruct(Parser * parser);
 
+static void toUpperCmd(char * command);
 /**
  * Default state machine that the server receives, it should
  * be modified only by this library, to maintain a correct
@@ -124,18 +126,18 @@ struct StateMachine {
     enum Command loginState;
 };
 
-static int welcomeTransition(Parser * parser, const char * command) {
+static int welcomeTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
-
+    toUpperCmd(command);
     if(strncmp(command, HELO_CMD, CMD_LEN) && command[CMD_LEN] == SPACE) {
         parser->machine->currentState = HELO_DOMAIN;
-        const char * helloDomain = command + CMD_LEN + 1;
+        char * helloDomain = command + CMD_LEN + 1;
         return welcomeHeloDomainTransition(parser, helloDomain);
     }
     else if(strncmp(command, EHLO_CMD, CMD_LEN) && command[CMD_LEN] == SPACE){
         parser->machine->currentState = EHLO_DOMAIN;
-        const char * ehloDomain = command + CMD_LEN + 1;
+        char * ehloDomain = command + CMD_LEN + 1;
         return welcomeEhloDomainTransition(parser, ehloDomain);
     }
     else if(strncmp(command, RSET_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
@@ -148,7 +150,7 @@ static int welcomeTransition(Parser * parser, const char * command) {
     else if(strncmp(command, VRFY_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
         parser->machine->currentState = VRFY_PARAM;
         parser->machine->priorState = WELCOME;
-        const char * vrfyParam = command + CMD_LEN + 1;
+        char * vrfyParam = command + CMD_LEN + 1;
         return vrfyTransition(parser, vrfyParam);
     }
     else if(strncmp(command, NOOP_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
@@ -173,7 +175,7 @@ static int welcomeTransition(Parser * parser, const char * command) {
     return ERR;
 }
 
-static int welcomeHeloDomainTransition(Parser * parser, const char * command) {
+static int welcomeHeloDomainTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
 
@@ -215,7 +217,7 @@ static int welcomeHeloDomainTransition(Parser * parser, const char * command) {
     return SUCCESS;
 }
 
-static int welcomeEhloDomainTransition(Parser * parser, const char * command) {
+static int welcomeEhloDomainTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
 
@@ -259,12 +261,13 @@ static int welcomeEhloDomainTransition(Parser * parser, const char * command) {
     return SUCCESS;
 }
 
-static int greetingTransition(Parser * parser, const char * command) {
+static int greetingTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
+    toUpperCmd(command);
 
     if(strncmp(command, MAIL_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
-        const char * mailArgs = command + CMD_LEN + 1;
+        char * mailArgs = command + CMD_LEN + 1;
         parser->machine->currentState = MAIL_FROM_INPUT;
         return mailFromTransition(parser, mailArgs);
     }
@@ -292,7 +295,7 @@ static int greetingTransition(Parser * parser, const char * command) {
     else if(strncmp(command, VRFY_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
         parser->machine->currentState = VRFY_PARAM;
         parser->machine->priorState = WELCOME;
-        const char * vrfyParam = command + CMD_LEN + 1;
+        char * vrfyParam = command + CMD_LEN + 1;
         return vrfyTransition(parser, vrfyParam);
     }
     else if(strncmp(command, EXPN_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
@@ -346,7 +349,7 @@ static int greetingTransition(Parser * parser, const char * command) {
     return ERR;
 }
 
-static int vrfyTransition(Parser * parser, const char * command) {
+static int vrfyTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
 
@@ -374,9 +377,10 @@ static int vrfyTransition(Parser * parser, const char * command) {
     return SUCCESS;
 }
 
-static int mailFromTransition(Parser * parser, const char * command) {
+static int mailFromTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
+    toUpperCmd(command);
 
     if(!strncmp(command, FROM_ARG, FROM_ARG_LEN)) {
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
@@ -386,7 +390,7 @@ static int mailFromTransition(Parser * parser, const char * command) {
         return ERR;
     }
 
-    const char * mailArg = command + FROM_ARG_LEN + 1;
+    char * mailArg = command + FROM_ARG_LEN + 1;
     unsigned long len = strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
     char parsedCmd[256] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
@@ -407,12 +411,13 @@ static int mailFromTransition(Parser * parser, const char * command) {
     return SUCCESS;
 }
 
-static int mailFromOkTransition(Parser * parser, const char * command) {
+static int mailFromOkTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
+    toUpperCmd(command);
 
     if(strncmp(command, RCPT_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
-        const char * mailArgs = command + CMD_LEN + 1;
+        char * mailArgs = command + CMD_LEN + 1;
         parser->machine->currentState = RCPT_TO_INPUT;
         return rcptToTransition(parser, mailArgs);
     }
@@ -440,7 +445,7 @@ static int mailFromOkTransition(Parser * parser, const char * command) {
     else if(strncmp(command, VRFY_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
         parser->machine->currentState = VRFY_PARAM;
         parser->machine->priorState = WELCOME;
-        const char * vrfyParam = command + CMD_LEN + 1;
+        char * vrfyParam = command + CMD_LEN + 1;
         return vrfyTransition(parser, vrfyParam);
     }
     else if(strncmp(command, EXPN_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
@@ -492,7 +497,7 @@ static int mailFromOkTransition(Parser * parser, const char * command) {
     return ERR;
 }
 
-static int rcptToTransition(Parser * parser, const char * command) {
+static int rcptToTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
 
@@ -504,7 +509,7 @@ static int rcptToTransition(Parser * parser, const char * command) {
         return ERR;
     }
 
-    const char * mailArg = command + TO_ARG_LEN + 1;
+    char * mailArg = command + TO_ARG_LEN + 1;
     unsigned long len = strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
     char parsedCmd[512] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
@@ -526,9 +531,10 @@ static int rcptToTransition(Parser * parser, const char * command) {
 }
 
 
-static int rcptToOkTransition(Parser * parser, const char * command) {
+static int rcptToOkTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
+    toUpperCmd(command);
 
     if(strncmp(command, DATA_CMD, CMD_LEN) && command[CMD_LEN] == '\r'){
         parser->machine->currentState = DATA_INPUT;
@@ -561,7 +567,7 @@ static int rcptToOkTransition(Parser * parser, const char * command) {
     else if(strncmp(command, VRFY_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
         parser->machine->currentState = VRFY_PARAM;
         parser->machine->priorState = WELCOME;
-        const char * vrfyParam = command + CMD_LEN + 1;
+        char * vrfyParam = command + CMD_LEN + 1;
         return vrfyTransition(parser, vrfyParam);
     }
     else if(strncmp(command, EXPN_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
@@ -615,7 +621,7 @@ static int rcptToOkTransition(Parser * parser, const char * command) {
     return ERR;
 }
 
-static int dataTransition(Parser * parser, const char * command) {
+static int dataTransition(Parser * parser, char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
 
@@ -636,6 +642,11 @@ static int dataTransition(Parser * parser, const char * command) {
     return SUCCESS;
 }
 
+void toUpperCmd(char * command) {
+    for(int i = 0; i < CMD_LEN || command[i] != '\0' || command[i] != '\n'; i++){
+        command[i] = toupper(command[i]);
+    }
+}
 
 static void freeStruct(Parser * parser) {
     if(parser->structure == NULL) return;
@@ -704,7 +715,7 @@ Parser * initParser(const char * serverDomain) {
  * TERMINAL: The parser has reached a terminal status, should use this
  *           value to know when to close the connection with the client
  */
-int parseCmd(Parser * parser, const char * command) {
+int parseCmd(Parser * parser, char * command) {
     if(parser == NULL || parser->machine == NULL) return TERMINAL;
     switch(parser->machine->currentState){
         case WELCOME: return welcomeTransition(parser, command);

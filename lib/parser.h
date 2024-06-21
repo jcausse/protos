@@ -100,7 +100,7 @@ Parser * initParser(const char * serverDomain);
  * TERMINAL: The parser has reached a terminal status, should use this
  *           value to know when to close the connection with the client
  */
-int parseCmd(Parser * parser, const char * command);
+int parseCmd(Parser * parser, char * command);
 
 /**
  * Destroys the parser, this should be done iif the server is
