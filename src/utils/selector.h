@@ -228,11 +228,10 @@ int Selector_write_next(Selector const self, int * type, void ** data);
 
 /**
  * \brief       Cleanup the Selector structures and release all memory allocated for
- *              associated data.
+ *              associated data. Attempts to close every file descriptor it contains,
+ *              but ignores any errors that may arise.
  * 
  * \param[in] self          The Selector itself, returned by Selector_create.
- * 
- * \todo        Deberia hacer close de los fds???
 */
 void Selector_cleanup(Selector self);
 

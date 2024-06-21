@@ -104,6 +104,14 @@ static int _Selector_next(Selector const self, LinkedList list, int * type, void
  */
 static void _Selector_free_cb(void * ptr);
 
+/**
+ * \brief       Callback used to close open file descriptors.
+ * 
+ * \param[in] fd        File descriptor to close
+ * \param[in] ignored   Ignored parameter
+ */
+static void _Selector_fd_close_cb(int fd, void * ignored);
+
 /*************************************************************************/
 /* HashMap callbacks                                                     */
 /*************************************************************************/
@@ -405,6 +413,10 @@ void Selector_cleanup(Selector self){
         return;
     }
 
+    /* Close all file descriptors */
+    LinkedList_foreach(&(self->read_fds),  _Selector_fd_close_cb, NULL);
+    LinkedList_foreach(&(self->write_fds), _Selector_fd_close_cb, NULL);
+
     /* Clear LinkedLists */
     LinkedList_cleanup(self->read_fds);
     LinkedList_cleanup(self->write_fds);
@@ -472,6 +484,11 @@ static int _Selector_next(Selector const self, LinkedList list, int * type, void
 
 static void _Selector_free_cb(void * ptr){
     SELECTOR_FREE(ptr);
+}
+
+static void _Selector_fd_close_cb(int fd, void * ignored){
+    (void) ignored;     // Avoids unused parameter warnings
+    close(fd);
 }
 
 /*************************************************************************/
