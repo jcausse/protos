@@ -138,10 +138,12 @@ typedef enum {
     SOCK_TYPE_QTY
 } SockTypes;
 
+#ifdef __SOCK_TYPES_HANDLERS_C__
+
 /**
  *              Read handlers for each socket type
  */
-SockReadHandler write_handlers[] = {
+SockReadHandler read_handlers[] = {
     #define XX(sock_type_numeric, sock_read_handler, sock_write_handler) sock_read_handler,
     SOCK_TYPES_AND_HANDLERS(XX)
     #undef XX
@@ -157,5 +159,12 @@ SockWriteHandler write_handlers[] = {
     #undef XX
     NULL
 };
+
+#else // __SOCK_TYPES_HANDLERS_C__
+
+extern SockReadHandler  read_handlers[];
+extern SockWriteHandler write_handlers[];
+
+#endif // __SOCK_TYPES_HANDLERS_C__
 
 #endif // __SOCK_TYPES_H__

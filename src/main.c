@@ -67,6 +67,11 @@ Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
 /****************************************************************/
 
 int main(int argc, char ** argv){
+    /**
+     * \todo argumentos
+     */
+    (void) argc;
+    (void) argv;
     if (smtpd_init()){
         smtpd_start();
     }

@@ -14,8 +14,9 @@
 #ifndef __SELECTOR_H__
 #define __SELECTOR_H__
 
-#include <stdbool.h>
-#include <sys/select.h>
+#include <stdbool.h>        // bool, true, false
+#include <sys/select.h>     // select()
+#include <unistd.h>         // close()
 #include "hashmap.h"
 #include "linkedlist.h"
 #include "exceptions.h"
