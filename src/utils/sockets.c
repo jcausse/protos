@@ -26,7 +26,7 @@ int tcp_connect(const char * restrict ip, uint16_t port, bool ipv6, bool keep_al
 
         /* If rst is set, set the Linger option */
         if (rst){
-            struct linger optval = {1, 0};  // 0 means TCP will discard unsent data and send RST
+            struct linger optval = {1, 0};  // 1 means option enabled, 0 means TCP will discard unsent data and send RST
             THROW_ON_ERR(setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &optval, sizeof(optval)));
         }
 
