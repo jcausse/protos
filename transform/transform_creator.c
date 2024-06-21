@@ -1,6 +1,6 @@
 #include "transform_creator.h"
 
-/*SlaveInfo transform(char * input,char* command){    
+SlaveInfo transform(char * input,char* command){    
 
     SlaveInfo slave;
     
@@ -33,7 +33,7 @@
 
 int main(int argc,char* argv[]){
     if(argc < 3){
-        return 1;
+        printf("err");
     }
     char* input = argv[1];
     char * cmd = argv[2];
@@ -54,5 +54,5 @@ int main(int argc,char* argv[]){
     close(slave.toSlavePipe[1]);
 
     return 0;
-}*/
+}
 
