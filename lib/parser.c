@@ -19,6 +19,8 @@
 #define VRFY_OK_MSG "250-<%s>\r\n"
 #define NEED_MAIL_FROM "503-5.5.1 Bad Sequence of Commands. Need MAIL FROM\r\n"
 #define NEED_RCPT_TO "503-5.5.1 Bad Sequence of Commands. Need RCPT\r\n"
+#define MAIL_FROM_ALREADY_IN "503-5.5.1 Bad Sequence of Commands. Mail From has been already sent.\r\n"
+#define RCPT_TO_ALREADY_IN "503-5.5.1 Bad Sequence of Commands. Rcpt To has been already sent.\r\n"
 #define ALREADY_SIGNED "503-5.5.1 Bad Sequence of Commands. You are already identified\r\n"
 #define ENTER_DATA_MSG "354 Start mail input; end with <CLRF>.<CLRF>\r\n"
 #define QUEUED_MSG "250 Ok. Queued\r\n"
@@ -27,7 +29,8 @@
 
 #define IPV4_REGEX "(\\b25[0-5]|\\b2[0-4][0-9]|\\b[01]?[0-9][0-9]?)(\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 #define IPV6_REGEX "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
-#define DOMAIN_REGEX "/^(([a-zA-Z]{1})|([a-zA-Z]{1}[a-zA-Z]{1})|([a-zA-Z]{1}[0-9]{1})|([0-9]{1}[a-zA-Z]{1})|([a-zA-Z0-9][a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]))\\.([a-zA-Z]{2,6}|[a-zA-Z0-9-]{2,30}\\.[a-zA-Z]{2,3})$/"
+#define DOMAIN_REGEX "^(([a-zA-Z]{1})|([a-zA-Z]{1}[a-zA-Z]{1})|([a-zA-Z]{1}[0-9]{1})|([0-9]{1}[a-zA-Z]{1})|([a-zA-Z0-9][a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]))\\.([a-zA-Z]{2,6}|[a-zA-Z0-9-]{2,30}\\.[a-zA-Z]{2,3})$"
+#define MAIL_REGEX "^((@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)|(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3},(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)+)?):)?[a-zA-Z0-9]+([._+-][a-zA-Z0-9]+)*@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?$"
 
 /**
  * This is for parsing arguments given by the client, such as
@@ -43,20 +46,21 @@
 #define EXPN_CMD "EXPN"
 #define MAIL_CMD "MAIL"
 #define RCPT_CMD "RCPT"
-
-#define FROM_ARG " FROM: <"
-#define TO_ARG " TO: <"
-
-#define DATA_CMD "DATA"
-#define END_DATA "."
 #define RSET_CMD "RSET"
 #define NOOP_CMD "NOOP"
 #define QUIT_CMD "QUIT"
 #define TRFM_CMD "TRFM"
 #define CMD_LEN 4
 
-#define STATE_CMD_ARR_SIZE 8
-#define NEXT_STATE_ARR_SIZE STATE_CMD_ARR_SIZE
+#define FROM_ARG " FROM: <"
+#define FROM_ARG_LEN strlen(FROM_ARG)
+
+#define TO_ARG " TO: <"
+#define TO_ARG_LEN strlen(TO_ARG)
+
+#define DATA_CMD "DATA"
+#define END_DATA ".\r\n"
+#define END_DATA_LEN strlen(END_DATA)
 
 #define NO_FLAGS 0
 #define SPACE 0x20
@@ -83,8 +87,7 @@ typedef enum States {
     RCPT_TO_INPUT,
     RCPT_TO_OK,
 
-    DATA_OK,
-    END_DATA_OK,
+    DATA_INPUT,
 
     QUIT_ST
 } States;
@@ -93,6 +96,7 @@ typedef enum States {
 static regex_t ipv4Regex;
 static regex_t ipv6Regex;
 static regex_t domainRegex;
+static regex_t mailRegex;
 
 // State transition functions
 static int welcomeTransition(Parser * parser, const char * command);
@@ -100,7 +104,9 @@ static int welcomeHeloDomainTransition(Parser * parser, const char * command);
 static int welcomeEhloDomainTransition(Parser * parser, const char * command);
 static int greetingTransition(Parser * parser, const char * command);
 static int mailFromTransition(Parser * parser, const char * command);
+static int mailFromOkTransition(Parser * parser, const char * command);
 static int rcptToTransition(Parser * parser, const char * command);
+static int rcptToOkTransition(Parser * parser, const char * command);
 static int dataTransition(Parser * parser, const char * command);
 static int vrfyTransition(Parser * parser, const char * command);
 
@@ -180,11 +186,10 @@ static int welcomeHeloDomainTransition(Parser * parser, const char * command) {
     }
 
     unsigned long len = strlen(command) - CLRF_LEN + 1; // Size of the argument plus null
-    char * parsedCmd = (char *) calloc(0, sizeof(char)*len + 1);
-    parsedCmd = strncpy(parsedCmd, command, len - 1);
+    char parsedCmd[256] = {0};
+    strncpy(parsedCmd, command, len - 1);
 
     if(!regexec(&domainRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)){
-        free(parsedCmd);
         parser->machine->currentState = WELCOME;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -192,10 +197,8 @@ static int welcomeHeloDomainTransition(Parser * parser, const char * command) {
         return ERR;
     }
 
-    char * greetingMsg = (char *) calloc(0, sizeof(char)*(strlen(HELO_GREETING_MSG) + strlen(parser->serverDom) + len + 1));
+    char greetingMsg [512] = {0};
     if(sprintf(greetingMsg, HELO_GREETING_MSG, parser->serverDom, parsedCmd) < 0){
-        free(parsedCmd);
-        free(greetingMsg);
         parser->machine->currentState = WELCOME;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -205,11 +208,10 @@ static int welcomeHeloDomainTransition(Parser * parser, const char * command) {
 
     parser->machine->currentState = GREETING;
     parser->machine->loginState = HELO;
-    parser->status = greetingMsg;
-    if(parser->structure != NULL) freeStruct(parser);
+    parser->status = strdup(greetingMsg);
     parser->structure = malloc(sizeof(CommandStructure));
     parser->structure->cmd = HELO;
-    parser->structure->heloDomain = parsedCmd;
+    parser->structure->heloDomain = strdup(parsedCmd);
     return SUCCESS;
 }
 
@@ -226,13 +228,12 @@ static int welcomeEhloDomainTransition(Parser * parser, const char * command) {
     }
 
     unsigned long len = strlen(command) - CLRF_LEN + 1; // Size of the argument plus null
-    char * parsedCmd = (char *) calloc(0, sizeof(char)*len);
-    parsedCmd = strncpy(parsedCmd, command, len - 1);
+    char parsedCmd[256] = {0};
+    strncpy(parsedCmd, command, len - 1);
 
     if(!regexec(&domainRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)
         && !regexec(&ipv4Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)
         && !regexec(&ipv6Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)){
-        free(parsedCmd);
         parser->machine->currentState = WELCOME;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -240,10 +241,8 @@ static int welcomeEhloDomainTransition(Parser * parser, const char * command) {
         return ERR;
     }
 
-    char * greetingMsg = (char *) calloc(0, sizeof(char)*(strlen(EHLO_GREETING_MSG) + strlen(parser->serverDom) + len + 1));
+    char greetingMsg[512] = {0};
     if(sprintf(greetingMsg, HELO_GREETING_MSG, parser->serverDom, parsedCmd) < 0){
-        free(parsedCmd);
-        free(greetingMsg);
         parser->machine->currentState = WELCOME;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -252,12 +251,11 @@ static int welcomeEhloDomainTransition(Parser * parser, const char * command) {
     }
 
     parser->machine->currentState = GREETING;
-    parser->status = greetingMsg;
+    parser->status = strdup(greetingMsg);
     parser->machine->loginState = EHLO;
-    if(parser->structure != NULL) freeStruct(parser);
     parser->structure = malloc(sizeof(CommandStructure));
     parser->structure->cmd = EHLO;
-    parser->structure->ehloDomain = parsedCmd;
+    parser->structure->ehloDomain = strdup(parsedCmd);
     return SUCCESS;
 }
 
@@ -273,7 +271,6 @@ static int greetingTransition(Parser * parser, const char * command) {
     else if(strncmp(command, RCPT_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
         parser->machine->currentState = GREETING;
         parser->status = strdup(NEED_MAIL_FROM);
-        if(parser->structure != NULL) freeStruct(parser);
         parser->structure = malloc(sizeof(CommandStructure));
         parser->structure->cmd = ERROR;
         return ERR;
@@ -281,7 +278,6 @@ static int greetingTransition(Parser * parser, const char * command) {
     else if(strncmp(command, DATA_CMD, CMD_LEN) && command[CMD_LEN] == '\r'){
         parser->machine->currentState = GREETING;
         parser->status = strdup(NEED_RCPT_TO);
-        if(parser->structure != NULL) freeStruct(parser);
         parser->structure = malloc(sizeof(CommandStructure));
         parser->structure->cmd = ERROR;
         return ERR;
@@ -289,7 +285,6 @@ static int greetingTransition(Parser * parser, const char * command) {
     else if(strncmp(command, RSET_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
         parser->machine->currentState = GREETING;
         parser->status = strdup(GENERIC_OK_MSG);
-        if(parser->structure != NULL) freeStruct(parser);
         parser->structure = malloc(sizeof(CommandStructure));
         parser->structure->cmd = RSET;
         return SUCCESS;
@@ -309,6 +304,7 @@ static int greetingTransition(Parser * parser, const char * command) {
     }
     else if(strncmp(command, TRFM_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
         if(parser->machine->loginState == HELO){
+            parser->machine->currentState = GREETING;
             parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
             parser->structure = malloc(sizeof(CommandStructure));
             parser->structure->cmd = TRFM;
@@ -323,7 +319,6 @@ static int greetingTransition(Parser * parser, const char * command) {
     else if(strncmp(command, NOOP_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
         parser->machine->currentState = GREETING;
         parser->status = strdup(GENERIC_OK_MSG);
-        if(parser->structure != NULL) freeStruct(parser);
         parser->structure = malloc(sizeof(CommandStructure));
         parser->structure->cmd = NOOP;
         return SUCCESS;
@@ -354,10 +349,9 @@ static int greetingTransition(Parser * parser, const char * command) {
 static int vrfyTransition(Parser * parser, const char * command) {
     if(parser->status != NULL) free(parser->status);
     if(parser->structure != NULL) freeStruct(parser);
-    unsigned long len = strlen(command) - CLRF_LEN + 1;
-    char * arg = (char *) malloc(sizeof(char)*len);
-    char * result;
-    int res = vrfy(result,  arg);
+
+    char * result = NULL;
+    int res = vrfy(result,  command);
     if(res == NONE) {
         parser->status = strdup(VRFY_NOT_FOUND);
         parser->machine->currentState = parser->machine->priorState;
@@ -366,29 +360,285 @@ static int vrfyTransition(Parser * parser, const char * command) {
         return ERR;
     }
     else if(res == SINGLE) {
-        len = strlen(VRFY_OK_MSG) + strlen(result) + 1;
-        char * status = (char*) malloc(sizeof(char)*len);
+        char status[256] = {0};
         sprintf(status, VRFY_OK_MSG, result);
-        parser->status = status;
+        parser->status = strdup(status);
         parser->machine->currentState = parser->machine->priorState;
         parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
         parser->structure->cmd = VRFY;
         return SUCCESS;
     }
 
-    len = strlen(VRFY_AMBIGUOUS_MSG) + strlen(result) + 1;
-    char * status = (char*) malloc(sizeof(char)*len);
+    char status[1024] = {0};
     sprintf(status, VRFY_AMBIGUOUS_MSG, result);
-    parser->status = status;
+    parser->status = strdup(status);
     parser->machine->currentState = parser->machine->priorState;
     parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
     parser->structure->cmd = VRFY;
     return SUCCESS;
 }
 
-static int mailFromTransition(Parser * parser, const char * command);
-static int rcptToTransition(Parser * parser, const char * command);
-static int dataTransition(Parser * parser, const char * command);
+static int mailFromTransition(Parser * parser, const char * command) {
+    if(parser->status != NULL) free(parser->status);
+    if(parser->structure != NULL) freeStruct(parser);
+
+    if(!strncmp(command, FROM_ARG, FROM_ARG_LEN)) {
+        parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
+        parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        parser->machine->currentState = GREETING;
+        return ERR;
+    }
+
+    const char * mailArg = command + FROM_ARG_LEN + 1;
+    unsigned long len = strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
+    char parsedCmd[256] = {0};
+    strncpy(parsedCmd, mailArg, len - 1);
+
+    if(!regexec(&mailRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)){
+        parser->machine->currentState = GREETING;
+        parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        return ERR;
+    }
+
+    parser->machine->currentState = MAIL_FROM_OK;
+    parser->status = strdup(GENERIC_OK_MSG);
+    parser->structure = malloc(sizeof(CommandStructure));
+    parser->structure->cmd = MAIL_FROM;
+    parser->structure->ehloDomain = strdup(parsedCmd);
+    return SUCCESS;
+}
+
+static int mailFromOkTransition(Parser * parser, const char * command) {
+    if(parser->status != NULL) free(parser->status);
+    if(parser->structure != NULL) freeStruct(parser);
+
+    if(strncmp(command, RCPT_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
+        const char * mailArgs = command + CMD_LEN + 1;
+        parser->machine->currentState = RCPT_TO_INPUT;
+        return rcptToTransition(parser, mailArgs);
+    }
+    else if(strncmp(command, MAIL_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
+        parser->machine->currentState = MAIL_FROM_OK;
+        parser->status = strdup(MAIL_FROM_ALREADY_IN);
+        parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        return ERR;
+    }
+    else if(strncmp(command, DATA_CMD, CMD_LEN) && command[CMD_LEN] == '\r'){
+        parser->machine->currentState = MAIL_FROM_OK;
+        parser->status = strdup(NEED_RCPT_TO);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        return ERR;
+    }
+    else if(strncmp(command, RSET_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = GREETING;
+        parser->status = strdup(GENERIC_OK_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = RSET;
+        return SUCCESS;
+    }
+    else if(strncmp(command, VRFY_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
+        parser->machine->currentState = VRFY_PARAM;
+        parser->machine->priorState = WELCOME;
+        const char * vrfyParam = command + CMD_LEN + 1;
+        return vrfyTransition(parser, vrfyParam);
+    }
+    else if(strncmp(command, EXPN_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
+        parser->machine->currentState = MAIL_FROM_OK;
+        parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
+        parser->structure->cmd = EXPN;
+        return ERR;
+    }
+    else if(strncmp(command, TRFM_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        if(parser->machine->loginState == HELO){
+            parser->machine->currentState = MAIL_FROM_OK;
+            parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
+            parser->structure->cmd = TRFM;
+            return ERR;
+        }
+        parser->machine->currentState = MAIL_FROM_OK;
+        parser->status = strdup(GENERIC_OK_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = TRFM;
+        parser->transform = !parser->transform;
+    }
+    else if(strncmp(command, NOOP_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = MAIL_FROM_OK;
+        parser->status = strdup(GENERIC_OK_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = NOOP;
+        return SUCCESS;
+    }
+    else if(strncmp(command, QUIT_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = QUIT_ST;
+        parser->status = strdup(QUIT_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = QUIT;
+        return TERMINAL;
+    }
+    else if((strncmp(command, HELO_CMD, CMD_LEN) && command[CMD_LEN] == ' ')
+         || (strncmp(command, EHLO_CMD, CMD_LEN) && command[CMD_LEN] == ' ')) {
+        parser->machine->currentState = MAIL_FROM_OK;
+        parser->status = strdup(ALREADY_SIGNED);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        return ERR;
+    }
+
+    parser->machine->currentState = MAIL_FROM_OK;
+    parser->status = strdup(SYNTAX_ERROR_MSG);
+    parser->structure = malloc(sizeof(CommandStructure));
+    parser->structure->cmd = ERROR;
+    return ERR;
+}
+
+static int rcptToTransition(Parser * parser, const char * command) {
+    if(parser->status != NULL) free(parser->status);
+    if(parser->structure != NULL) freeStruct(parser);
+
+    if(!strncmp(command, TO_ARG, TO_ARG_LEN)) {
+        parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
+        parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        parser->machine->currentState = MAIL_FROM_OK;
+        return ERR;
+    }
+
+    const char * mailArg = command + TO_ARG_LEN + 1;
+    unsigned long len = strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
+    char parsedCmd[512] = {0};
+    strncpy(parsedCmd, mailArg, len - 1);
+
+    if(!regexec(&mailRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)){
+        parser->machine->currentState = MAIL_FROM_OK;
+        parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        return ERR;
+    }
+
+    parser->machine->currentState = RCPT_TO_OK;
+    parser->status = strdup(GENERIC_OK_MSG);
+    parser->structure = malloc(sizeof(CommandStructure));
+    parser->structure->cmd = RCPT_TO;
+    parser->structure->ehloDomain = strdup(parsedCmd);
+    return SUCCESS;
+}
+
+
+static int rcptToOkTransition(Parser * parser, const char * command) {
+    if(parser->status != NULL) free(parser->status);
+    if(parser->structure != NULL) freeStruct(parser);
+
+    if(strncmp(command, DATA_CMD, CMD_LEN) && command[CMD_LEN] == '\r'){
+        parser->machine->currentState = DATA_INPUT;
+        parser->status = strdup(ENTER_DATA_MSG);
+        parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
+        parser->structure->cmd = DATA;
+        return SUCCESS;
+    }
+    else if(strncmp(command, RCPT_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
+        parser->machine->currentState = RCPT_TO_OK;
+        parser->status = strdup(RCPT_TO_ALREADY_IN);
+        parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        return ERR;
+    }
+    else if(strncmp(command, MAIL_CMD, CMD_LEN) && command[CMD_LEN] == ' '){
+        parser->machine->currentState = RCPT_TO_OK;
+        parser->status = strdup(MAIL_FROM_ALREADY_IN);
+        parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        return ERR;
+    }
+    else if(strncmp(command, RSET_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = GREETING;
+        parser->status = strdup(GENERIC_OK_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = RSET;
+        return SUCCESS;
+    }
+    else if(strncmp(command, VRFY_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
+        parser->machine->currentState = VRFY_PARAM;
+        parser->machine->priorState = WELCOME;
+        const char * vrfyParam = command + CMD_LEN + 1;
+        return vrfyTransition(parser, vrfyParam);
+    }
+    else if(strncmp(command, EXPN_CMD, CMD_LEN) && command[CMD_LEN] == ' ') {
+        parser->machine->currentState = RCPT_TO_OK;
+        parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = EXPN;
+        return ERR;
+    }
+    else if(strncmp(command, TRFM_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        if(parser->machine->loginState == HELO){
+            parser->machine->currentState = RCPT_TO_OK;
+            parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
+            parser->structure = malloc(sizeof(CommandStructure));
+            parser->structure->cmd = TRFM;
+            return ERR;
+        }
+        parser->machine->currentState = RCPT_TO_OK;
+        parser->status = strdup(GENERIC_OK_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = TRFM;
+        parser->transform = !parser->transform;
+    }
+    else if(strncmp(command, NOOP_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = RCPT_TO_OK;
+        parser->status = strdup(GENERIC_OK_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = NOOP;
+        return SUCCESS;
+    }
+    else if(strncmp(command, QUIT_CMD, CMD_LEN) && command[CMD_LEN] == '\r') {
+        parser->machine->currentState = QUIT_ST;
+        parser->status = strdup(QUIT_MSG);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = QUIT;
+        return TERMINAL;
+    }
+    else if((strncmp(command, HELO_CMD, CMD_LEN) && command[CMD_LEN] == ' ')
+         || (strncmp(command, EHLO_CMD, CMD_LEN) && command[CMD_LEN] == ' ')) {
+        parser->machine->currentState = RCPT_TO_OK;
+        parser->status = strdup(ALREADY_SIGNED);
+        parser->structure = malloc(sizeof(CommandStructure));
+        parser->structure->cmd = ERROR;
+        return ERR;
+    }
+
+    parser->machine->currentState = RCPT_TO_OK;
+    parser->status = strdup(SYNTAX_ERROR_MSG);
+    parser->structure = malloc(sizeof(CommandStructure));
+    parser->structure->cmd = ERROR;
+    return ERR;
+}
+
+static int dataTransition(Parser * parser, const char * command) {
+    if(parser->status != NULL) free(parser->status);
+    if(parser->structure != NULL) freeStruct(parser);
+
+    if(strncmp(command, END_DATA, END_DATA_LEN)) {
+        parser->machine->currentState = GREETING;
+        parser->status = strdup(QUEUED_MSG);
+        parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
+        parser->structure->cmd = DATA;
+        parser->structure->dataStr = strdup(command);
+        return SUCCESS;
+    }
+
+    parser->machine->currentState = DATA_INPUT;
+    parser->status = NULL;
+    parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
+    parser->structure->cmd = DATA;
+    parser->structure->dataStr = strdup(command);
+    return SUCCESS;
+}
 
 
 static void freeStruct(Parser * parser) {
@@ -410,9 +660,10 @@ static void freeStruct(Parser * parser) {
  * all the arguments given by the client.
  */
 int compileRegexes(void) {
-    if(!regcomp(&ipv4Regex, IPV4_REGEX, NO_FLAGS) ||
-       !regcomp(&ipv6Regex, IPV6_REGEX, NO_FLAGS) ||
-       !regcomp(&domainRegex, DOMAIN_REGEX, NO_FLAGS)) return ERR;
+    if(!regcomp(&ipv4Regex, IPV4_REGEX, NO_FLAGS)     ||
+       !regcomp(&ipv6Regex, IPV6_REGEX, NO_FLAGS)     ||
+       !regcomp(&domainRegex, DOMAIN_REGEX, NO_FLAGS) ||
+       !regcomp(&mailRegex, MAIL_REGEX, NO_FLAGS))    return ERR;
     return SUCCESS;
 }
 
@@ -461,15 +712,10 @@ int parseCmd(Parser * parser, const char * command) {
     if(parser == NULL || parser->machine == NULL) return TERMINAL;
     switch(parser->machine->currentState){
         case WELCOME: return welcomeTransition(parser, command);
-
         case GREETING: return greetingTransition(parser, command);
-
-        case MAIL_FROM_OK: return mailFromTransition(parser, command);
-
-        case RCPT_TO_OK: return rcptToTransition(parser, command);
-
-        case DATA_OK: return dataTransition(parser, command);
-
+        case MAIL_FROM_OK: return mailFromOkTransition(parser, command);
+        case RCPT_TO_OK: return rcptToOkTransition(parser, command);
+        case DATA_INPUT: return dataTransition(parser, command);
         default: return TERMINAL; // Unexpected parsing error, should never get here
     }
 }
