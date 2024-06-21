@@ -231,6 +231,8 @@ int Selector_write_next(Selector const self, int * type, void ** data);
  *              associated data.
  * 
  * \param[in] self          The Selector itself, returned by Selector_create.
+ * 
+ * \todo        Deberia hacer close de los fds???
 */
 void Selector_cleanup(Selector self);
 
