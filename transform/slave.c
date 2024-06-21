@@ -29,27 +29,30 @@ int transform_mail(char * mail, char * command,char * toSave) {
 
 int main (int argc, char *argv[]) {
     if (argc < 3) {
-        write(STDOUT_FILENO, ERR_MSG,strlen(ERR_MSG)+1);
+        printf(ERR_MSG);
     }
     check_dir(INBOX);
     char * command = argv[1];
     char * mail = malloc(strlen(argv[2]) + 1);
-       if (mail == NULL) {
+    if (mail == NULL) {
         perror("malloc");
+        exit(EXIT_FAILURE);
     }
     strcpy(mail, argv[2]);
     
   
     char * user = strtok(mail, "-");
     if (user == NULL) {
-        write(STDOUT_FILENO, ERR_MSG,strlen(ERR_MSG)+1);
+        fprintf(stderr, ERR_MSG);
         free(mail);
+        exit(EXIT_FAILURE);
     }
 
     char * aux = strtok(NULL, "-");
     if (aux == NULL) {
-        write(STDOUT_FILENO, ERR_MSG,strlen(ERR_MSG)+1);
+        fprintf(stderr, ERR_MSG);
         free(mail);
+        exit(EXIT_FAILURE);
     }
 
     char * toSave= malloc(strlen(INBOX) + strlen(aux) +strlen(user) + 2);
