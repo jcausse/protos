@@ -1,6 +1,8 @@
 #ifndef _PARSER_H_
 #define _PARSER_H_
 
+#include <stdbool.h>
+
 #define ERR -1
 #define TERMINAL -2
 #define SUCCESS 0
@@ -12,13 +14,15 @@
 typedef enum Command {
     HELO,
     EHLO,
-    AUTH,
+    VRFY,
+    EXPN,
     MAIL_FROM,
     RCPT_TO,
     DATA,
     RSET,
     QUIT,
     NOOP,
+    TRFM,
     ERROR,
 } Command;
 
@@ -49,6 +53,7 @@ typedef struct Parser {
     char * status;
     CommandStructure * structure;
     char * serverDom;
+    bool transform;
 } Parser;
 
 /**
