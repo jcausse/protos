@@ -7,10 +7,15 @@
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
  */
 
+#include <stdio.h>
+#include <signal.h>
+
+#include "logger.h"
 #include "selector.h"
 #include "sockets.h"
 #include "sock_types_handlers.h"
 #include "exceptions.h"
+#include "messages.h"
 
 /****************************************************************/
 /* SMTPD configuration                                          */
@@ -28,25 +33,77 @@
 /****************************************************************/
 
 /**
- * \brief       Starts SMTPD after creating the Selector
+ * \brief       Initializes SMTPD.
+ * 
+ * \return      true if successfully initialized, false otherwise.
  */
-int smtpd_start(Selector selector);
+bool smtpd_init();
+
+/**
+ * \brief       Starts SMTPD after initialization.
+ * 
+ * \return      On success, this function does not return. On failure, returns false.
+ */
+bool smtpd_start();
+
+/**
+ * \brief       Captures SIGINT signal to gracefully stop SMTPD.
+ * \details     Attempts to perform a cleanup of the Selector and the Logger.
+ * 
+ * \param[in] signum    According to the documentation, the handler receives the
+ *                      signal number that triggered its call. In this case, SIGINT.
+ */
+void sigint_handler(int sigint);
 
 /****************************************************************/
-/* Public function definitions                                  */
+/* Global variables                                             */
+/****************************************************************/
+
+Logger      logger      = NULL;     // Logger (see src/lib/logger.h)
+Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
+
+/****************************************************************/
+/* Main function                                                */
 /****************************************************************/
 
 int main(int argc, char ** argv){
-    int sv_fd_4 = -1, sv_fd_6 = -1;
-    Selector selector = NULL;
+    if (smtpd_init()){
+        smtpd_start();
+    }
+    return EXIT_FAILURE;
+}
+
+/****************************************************************/
+/* Private function definitions                                 */
+/****************************************************************/
+
+bool smtpd_init(){
+    /* Set SIGINT handler */
+    signal(SIGINT, sigint_handler);
+
+    /* Variables */
+    int         sv_fd_4     = -1;       // IPv4 server socket
+    int         sv_fd_6     = -1;       // IPv6 server socket
+
+    /* Logger configuration */
+    LoggerConfig logger_cfg = {
+        .min_log_level      = LOGGER_DEFAULT_MIN_LOG_LEVEL, // Minimum log level
+        .with_datetime      = true,     // Include date and time in logs
+        .with_level         = true,     // Include log levels
+        .flush_immediately  = true,     // Disable buffering for real-time log viewing (tail -f)
+        .log_prefix         = "smtpd v1.0.0"
+    };
 
     TRY{
         /* Create Logger */
-        THROW_IF_NOT(
-            Logger_create(
-                LOG_FILE                // Absolute path to the file that will hold the logs
-            )
-        );                              // Expected return: true
+        THROW_IF(
+            (logger =
+                Logger_create(
+                    logger_cfg,         // Logger configuration
+                    LOG_FILE            // Absolute path to the file that will hold the logs
+                )
+            ) == NULL                   // Expected return: Logger (not NULL)
+        );
 
         /* Create passive sockets (server sockets) for IPv4 and IPv6 */
         THROW_IF_NOT(
@@ -84,21 +141,59 @@ int main(int argc, char ** argv){
         );
     }
     CATCH{
+        /* Could not create the logger*/
+        if (logger == NULL){
+            if (errno == EACCES){
+                fprintf(stderr, MSG_ERR_EACCES, LOG_FILE);
+            }
+            else if (errno == ENOMEM){
+                fprintf(stderr, MSG_ERR_NO_MEM);
+            }
+            fprintf(stderr, MSG_EXIT_FAILURE);
+            return false;
+        }
+
+        /* Could not create server socket */
+        else if (sv_fd_4 == -1 || sv_fd_6 == -1){
+            LOG_ERR(MSG_ERR_SV_SOCKET);
+        }
+
+        /* No memory available for allocation */
+        else{
+            LOG_ERR(MSG_ERR_NO_MEM);
+        }
+
+        /* Log that SMTPD exited on error */
+        LOG_ERR(MSG_EXIT_FAILURE);
+
+        /* Cleanup and exit */
         safe_close(sv_fd_4);
         safe_close(sv_fd_6);
         Selector_cleanup(selector);
-        return EXIT_FAILURE;
+        Logger_cleanup(logger);
+        return false;
     }
 
-    return smtpd_start(selector);
+    return true;
 }
 
-/****************************************************************/
-/* Private function definitions                                 */
-/****************************************************************/
-
-int smtpd_start(Selector selector){
+bool smtpd_start(){
     while (true) {
-
+        /**
+         * \todo
+         */
     }
+
+    return false;
+}
+
+void sigint_handler(int signum){
+    (void) signum;  // Avoids unused parameter warning
+    if (selector != NULL){
+        Selector_cleanup(selector);
+    }
+    if (logger != NULL){
+        LOG_MSG(MSG_EXIT_SIGINT);
+    }
+    exit(EXIT_SUCCESS);
 }
