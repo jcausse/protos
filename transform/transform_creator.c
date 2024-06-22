@@ -4,8 +4,10 @@ SlaveInfo transform(char * input,char* command){
 
     SlaveInfo slave;
     
-    pipe(slave.toSlavePipe);
-    pipe(slave.fromSlavePipe); 
+    if (pipe(slave.toSlavePipe) == -1 || pipe(slave.fromSlavePipe) == -1) {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
     
     if ((slave.pid = fork()) == 0) {
             // Código para el proceso hijo (slave)
@@ -37,16 +39,37 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    char *input = argv[1];
-    char *cmd = argv[2];
-    SlaveInfo slave = transform(input, cmd);
+    char *command = argv[1];
+    char *input = argv[2];
+
+    SlaveInfo slave = transform(input, command);
 
     printf("Slave PID: %d\n", slave.pid);
 
     ssize_t nbytes;
-    char inputBuffer[MAX_BUFFER_SIZE];
+    char inputBuffer[MAX_BUFFER_SIZE];  
     char outputBuffer[MAX_BUFFER_SIZE];
 
+    // Process the first input file passed as a parameter
+    write(slave.toSlavePipe[1], input, strlen(input) + 1);
+
+    // Read the response from the slave
+    nbytes = read(slave.fromSlavePipe[0], outputBuffer, sizeof(outputBuffer) - 1);
+    if (nbytes > 0) {
+        outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
+        printf("Slave output: %s", outputBuffer);
+
+        // Check if the slave has finished its task
+        if (strcmp(outputBuffer, SUCCESS) == 0) {
+            printf("Slave completed the task successfully.\n");
+        } else {
+            printf("Slave failed to complete the task.\n");
+        }
+    } else {
+        perror("read from slave");
+    }
+
+    // Process subsequent input from stdin
     while ((nbytes = read(STDIN_FILENO, inputBuffer, sizeof(inputBuffer) - 1)) > 0) {
         if (nbytes > MAX_BUFFER_SIZE) {
             fprintf(stderr, "Input too long\n");
@@ -57,11 +80,18 @@ int main(int argc, char* argv[]) {
 
         write(slave.toSlavePipe[1], inputBuffer, nbytes);
 
-        // Read the output from the slave
+        // Read the response from the slave
         nbytes = read(slave.fromSlavePipe[0], outputBuffer, sizeof(outputBuffer) - 1);
         if (nbytes > 0) {
             outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
-            write(STDOUT_FILENO, outputBuffer, nbytes);
+            printf("Slave output: %s", outputBuffer);
+
+            // Check if the slave has finished its task
+            if (strcmp(outputBuffer, SUCCESS) == 0) {
+                printf("Slave completed the task successfully.\n");
+            } else {
+                printf("Slave failed to complete the task.\n");
+            }
         } else {
             perror("read from slave");
         }
@@ -70,6 +100,7 @@ int main(int argc, char* argv[]) {
     close(slave.toSlavePipe[1]);
     close(slave.fromSlavePipe[0]);
 
+    // Wait for the slave process to finish
     int status;
     waitpid(slave.pid, &status, 0);
 
