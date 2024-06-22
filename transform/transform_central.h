@@ -20,10 +20,11 @@
 #define MAX_MAILS 100
 #define TKN "-"
 #define MAX_SLAVES 5
+#define SLAVE_NAME "./slave.exe"
 
 typedef struct{
-    int pid; //Proceso que se ocupa de la transofrmacion
-    int toSlavePipe[2];//Pipes correspondientes
+    int pid;                    //Process pid
+    int toSlavePipe[2];         //Pipes to send and receive messages to the slave
     int fromSlavePipe[2];
 } SlaveInfo;
 

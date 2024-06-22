@@ -17,8 +17,8 @@ SlaveInfo create_slave(char* command){
             // Redirecciona las entradas/salidas estándar según sea necesario
         dup2(slave.toSlavePipe[0], STDIN_FILENO);
         dup2(slave.fromSlavePipe[1], STDOUT_FILENO);
-        char * args[] = {"slave.exe",command,NULL};
-        execve("./slave.exe",args, NULL);
+        char * args[] = {SLAVE_NAME,command,NULL};
+        execve(SLAVE_NAME,args, NULL);
 
         perror("execve");
         exit(EXIT_FAILURE);
