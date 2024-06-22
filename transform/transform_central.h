@@ -14,7 +14,7 @@
 
 #define MAX_MAILS 100
 #define TKN "-"
-#define MAX_SLAVES 25
+#define MAX_SLAVES 5
 #define NO_ACTIVE_SLAVE -2
 #define TO_TRANSFORM "../auxM"
 #define INBOX "../inbox"
@@ -28,16 +28,9 @@ typedef struct{
     char* buffer;
 }Message;
 
-void tControl(char* command);
+/*void tControl(char* command);
 
-Message queue_message(char* buffer);
-
-static void check_dir(const char * dir){
-    struct stat st = {0};
-    if (stat(dir, &st) == -1) {
-        mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
-    }
-}
+Message queue_message(char* buffer);*/
 
 typedef struct{
     int pid; //Proceso que se ocupa de la transofrmacion
@@ -45,6 +38,6 @@ typedef struct{
     int fromSlavePipe[2];
 } SlaveInfo;
 
-SlaveInfo transform(char* command);
+SlaveInfo create_slave(char* command);
 
 #endif

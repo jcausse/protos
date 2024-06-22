@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #define INBOX "../inbox/"
-#define SUCCESS "254 \n"
-#define FAILURE "255 \n"
+#define SUCCESS "254"
+#define FAILURE "255"
 #define MAX_BUFFER_SIZE 1049
 #define ERR_MSG "Usage: <command> <mail>\n"
 
