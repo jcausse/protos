@@ -127,9 +127,14 @@ struct StateMachine {
 };
 
 static int welcomeTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
+
     toUpperCmd(command);
+
     if(strncmp(command, HELO_CMD, CMD_LEN) && command[CMD_LEN] == SPACE) {
         parser->machine->currentState = HELO_DOMAIN;
         char * helloDomain = command + CMD_LEN + 1;
@@ -176,7 +181,10 @@ static int welcomeTransition(Parser * parser, char * command) {
 }
 
 static int welcomeHeloDomainTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
 
     if(command[0] == '\0' || command[0] == '\r' || command[0] == '\n') {
@@ -191,7 +199,7 @@ static int welcomeHeloDomainTransition(Parser * parser, char * command) {
     char parsedCmd[256] = {0};
     strncpy(parsedCmd, command, len - 1);
 
-    if(!regexec(&domainRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)){
+    if(regexec(&domainRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS) == REG_NOMATCH){
         parser->machine->currentState = WELCOME;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -218,7 +226,10 @@ static int welcomeHeloDomainTransition(Parser * parser, char * command) {
 }
 
 static int welcomeEhloDomainTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
 
     if(command[0] == '\0' || command[0] == '\r' || command[0] == '\n') {
@@ -233,9 +244,9 @@ static int welcomeEhloDomainTransition(Parser * parser, char * command) {
     char parsedCmd[256] = {0};
     strncpy(parsedCmd, command, len - 1);
 
-    if(!regexec(&domainRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)
-        && !regexec(&ipv4Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)
-        && !regexec(&ipv6Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)){
+    if( regexec(&domainRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS) == REG_NOMATCH
+     || regexec(&ipv4Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)   == REG_NOMATCH
+     || regexec(&ipv6Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)   == REG_NOMATCH){
         parser->machine->currentState = WELCOME;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -262,7 +273,10 @@ static int welcomeEhloDomainTransition(Parser * parser, char * command) {
 }
 
 static int greetingTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
     toUpperCmd(command);
 
@@ -350,7 +364,10 @@ static int greetingTransition(Parser * parser, char * command) {
 }
 
 static int vrfyTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
 
     char * result = NULL;
@@ -378,7 +395,10 @@ static int vrfyTransition(Parser * parser, char * command) {
 }
 
 static int mailFromTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
     toUpperCmd(command);
 
@@ -395,7 +415,7 @@ static int mailFromTransition(Parser * parser, char * command) {
     char parsedCmd[256] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
 
-    if(!regexec(&mailRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)){
+    if(regexec(&mailRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS) == REG_NOMATCH){
         parser->machine->currentState = GREETING;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -412,7 +432,10 @@ static int mailFromTransition(Parser * parser, char * command) {
 }
 
 static int mailFromOkTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
     toUpperCmd(command);
 
@@ -498,7 +521,10 @@ static int mailFromOkTransition(Parser * parser, char * command) {
 }
 
 static int rcptToTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
 
     if(!strncmp(command, TO_ARG, TO_ARG_LEN)) {
@@ -514,7 +540,7 @@ static int rcptToTransition(Parser * parser, char * command) {
     char parsedCmd[512] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
 
-    if(!regexec(&mailRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)){
+    if(regexec(&mailRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS) == REG_NOMATCH){
         parser->machine->currentState = MAIL_FROM_OK;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -532,7 +558,10 @@ static int rcptToTransition(Parser * parser, char * command) {
 
 
 static int rcptToOkTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
     toUpperCmd(command);
 
@@ -622,7 +651,10 @@ static int rcptToOkTransition(Parser * parser, char * command) {
 }
 
 static int dataTransition(Parser * parser, char * command) {
-    if(parser->status != NULL) free(parser->status);
+    if(parser->status != NULL) {
+        free(parser->status);
+        parser->status = NULL;
+    }
     if(parser->structure != NULL) freeStruct(parser);
 
     if(strncmp(command, END_DATA, END_DATA_LEN)) {
@@ -643,7 +675,7 @@ static int dataTransition(Parser * parser, char * command) {
 }
 
 void toUpperCmd(char * command) {
-    for(int i = 0; i < CMD_LEN || command[i] != '\0' || command[i] != '\n'; i++){
+    for(int i = 0; i < CMD_LEN && command[i] != '\0' && command[i] != '\n'; i++){
         command[i] = toupper(command[i]);
     }
 }
@@ -659,6 +691,7 @@ static void freeStruct(Parser * parser) {
         default: break;
     }
     free(parser->structure);
+    parser->structure = NULL;
 }
 
 /**
