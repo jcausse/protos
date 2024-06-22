@@ -1,4 +1,15 @@
 #include "transform_central.h"
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/select.h>
+#include <signal.h>
+
 
 SlaveInfo create_slave(char* command){    
 
@@ -33,19 +44,14 @@ SlaveInfo create_slave(char* command){
         return slave;
     }
 
-void distribute_tasks( char* initial_input,char* command){
-    if (argc < 3) {
-        fprintf(stderr, "Usage: %s <command> <input>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
+void distribute_tasks( char* start_input,char* cmd){
 
-    char *command = command;
-    char *initial_input = initial_input;
+    char *command = cmd;
+    char *initial_input = start_input;
 
     SlaveInfo slaves[MAX_SLAVES];
     for (int i = 0; i < MAX_SLAVES; i++) {
         slaves[i] = create_slave(command);
-        printf("Slave %d PID: %d\n", i, slaves[i].pid);
     }
 
     int current_slave = 0;
@@ -113,6 +119,10 @@ void distribute_tasks( char* initial_input,char* command){
 }
 
 int main(int argc, char* argv[]) {
+    if(argc < 3){
+        printf("Usage: %s <command> <initial_input>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
     distribute_tasks(argv[2],argv[1]);
     return 0;
 }

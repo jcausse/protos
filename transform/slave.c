@@ -1,14 +1,47 @@
-#include "transform_central.h"
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/select.h>
+#include <signal.h>
+
+#define INBOX "../inbox/"
+#define TO_TRANSFORM "../auxM/"
+#define SUCCESS "254"
+#define FAILURE "255"
+#define MAX_BUFFER_SIZE 1049
+#define TKN "-"
 #define ERR_MSG "Usage: <command> <mail>\n"
 
-void check_dir(char * dir){
+/**
+ * \brief                       Checks if the given directory exists, if not creates it.
+ * 
+ * \param[in] dir               Directory to check.
+ *
+ * 
+ * \return                      void
+ */
+static void check_dir(char * dir) {
     struct stat st = {0};
     if (stat(dir, &st) == -1) {
         mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
     }
 }
 
-void removeSubstr (char *string, char *sub){
+/**
+ * \brief                       Removes a substring from a string. Used to remove the TO_TRANSFORM substring from the user name.
+ * 
+ * \param[in] string            Given string to clean.
+ * \param[in] sub               Substring to remove form the string.
+ *
+ * 
+ * \return                      void
+ */
+static void removeSubstr (char *string, char *sub) {
     char *match;
     int len = strlen(sub);
     while ((match = strstr(string, sub))) {
@@ -17,11 +50,19 @@ void removeSubstr (char *string, char *sub){
     }
 }
 
-int transform_mail(char * mail, char * command,char * toSave){
+/**
+ * \brief                       Creates and runs the command to transform the given mail and leaves it in the inbox of the specified user.
+ * 
+ * \param[in] mail              Path of the mail to transform.
+ * \param[in] command           Transformation command to apply.
+ * \param[in] toSave            Path of the inbox to save the transformed mail.
+ * 
+ * \return                      On success, 0. On failure, -1.
+ */
+static int transform_mail(char * mail, char * command,char * toSave) {
     char* com = calloc(300,sizeof(char));
     removeSubstr(toSave, TO_TRANSFORM);
     snprintf(com, 300, "%s %s > %s 2> transform.err", command, mail, toSave);
-    printf("COM: %s\n",com);
     int retVal = system(com);
     free(com);
     return retVal;  
@@ -58,10 +99,10 @@ int main (int argc, char *argv[]) {
         }
         strcpy(mail, inputBuffer);
 
-        user = strtok(mail, "-");
+        user = strtok(mail, TKN);
         removeSubstr(user, TO_TRANSFORM);
         puts(user);
-        aux = strtok(NULL, "-");
+        aux = strtok(NULL, TKN);
         aux[strlen(aux) -1 ] = '\0';
 
         toSave= malloc(strlen(INBOX) + strlen(aux) +strlen(user) + 2);
