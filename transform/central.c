@@ -60,13 +60,12 @@ void distribute_tasks(int argc, char* argv[]) {
     nbytes = read(slaves[current_slave].fromSlavePipe[0], outputBuffer, sizeof(outputBuffer) - 1);
     if (nbytes > 0) {
         outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
-        printf("Slave %d output: %s", current_slave, outputBuffer);
 
         // Check if the slave has finished its task
         if (strcmp(outputBuffer, SUCCESS) == 0) {
-            printf("Slave %d completed the task successfully.\n", current_slave);
+            write(STDOUT_FILENO, SUCCESS, strlen(SUCCESS) + 1); 
         } else {
-            printf("Slave %d failed to complete the task.\n", current_slave);
+           write(STDOUT_FILENO,FAILURE,strlen(FAILURE)+1);
         }
     } else {
         perror("read from slave");

@@ -1,14 +1,4 @@
-#include <dirent.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#define INBOX "../inbox/"
-#define SUCCESS "254"
-#define FAILURE "255"
-#define MAX_BUFFER_SIZE 1049
+#include "transform_central.h"
 #define ERR_MSG "Usage: <command> <mail>\n"
 
 static void check_dir(char * dir){
@@ -18,8 +8,18 @@ static void check_dir(char * dir){
     }
 }
 
+void removeSubstr (char *string, char *sub) {
+    char *match;
+    int len = strlen(sub);
+    while ((match = strstr(string, sub))) {
+        *match = '\0';
+        strcat(string, match+len);
+    }
+}
+
 int transform_mail(char * mail, char * command,char * toSave) {
     char* com = calloc(300,sizeof(char));
+    removeSubstr(toSave, TO_TRANSFORM);
     snprintf(com, 300, "%s %s > %s 2> transform.err", command, mail, toSave);
     printf("COM: %s\n",com);
     int retVal = system(com);
@@ -50,6 +50,8 @@ int main (int argc, char *argv[]) {
         strcpy(mail, inputBuffer);
 
         user = strtok(mail, "-");
+        removeSubstr(user, TO_TRANSFORM);
+        puts(user);
         aux = strtok(NULL, "-");
         aux[strlen(aux) -1 ] = '\0';
 

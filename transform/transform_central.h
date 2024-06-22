@@ -12,17 +12,16 @@
 #include <sys/select.h>
 #include <signal.h>
 
+#define INBOX "../inbox/"
+#define SUCCESS "254"
+#define FAILURE "255"
+#define MAX_BUFFER_SIZE 1049
+
 #define MAX_MAILS 100
 #define TKN "-"
 #define MAX_SLAVES 5
 #define NO_ACTIVE_SLAVE -2
-#define TO_TRANSFORM "../auxM"
-#define INBOX "../inbox"
-
-#define SUCCESS "254"
-#define FAILURE "255"
-
-#define MAX_BUFFER_SIZE 1049
+#define TO_TRANSFORM "../auxM/"
 
 typedef struct{
     char* buffer;

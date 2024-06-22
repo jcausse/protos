@@ -9,7 +9,7 @@ SlaveInfo transform(char * input,char* command){
         exit(EXIT_FAILURE);
     }
     
-    if ((slave.pid = fork()) == 0) {
+    if ((slave.pid = fork()) == 0) 
             // Código para el proceso hijo (slave)
         close(slave.toSlavePipe[1]);
         close(slave.fromSlavePipe[0]);
