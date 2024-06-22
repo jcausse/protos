@@ -1,14 +1,14 @@
 #include "transform_central.h"
 #define ERR_MSG "Usage: <command> <mail>\n"
 
-static void check_dir(char * dir){
+void check_dir(char * dir){
     struct stat st = {0};
     if (stat(dir, &st) == -1) {
         mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
     }
 }
 
-void removeSubstr (char *string, char *sub) {
+void removeSubstr (char *string, char *sub){
     char *match;
     int len = strlen(sub);
     while ((match = strstr(string, sub))) {
@@ -17,7 +17,7 @@ void removeSubstr (char *string, char *sub) {
     }
 }
 
-int transform_mail(char * mail, char * command,char * toSave) {
+int transform_mail(char * mail, char * command,char * toSave){
     char* com = calloc(300,sizeof(char));
     removeSubstr(toSave, TO_TRANSFORM);
     snprintf(com, 300, "%s %s > %s 2> transform.err", command, mail, toSave);
@@ -27,6 +27,15 @@ int transform_mail(char * mail, char * command,char * toSave) {
     return retVal;  
 }
 
+/**
+ * \brief                       Parses the file given to extract the user and the mail to transform.
+ * 
+ * \param[in] argc              Name of the program, name of the transformation command and the path to the mail to transform.
+ * \param[in] argv              The arguments mentiones above in that order
+ * .
+ * 
+ * \return                      On success, 254. On failure, 255 via pipe.
+ */
 int main (int argc, char *argv[]) {
     if (argc < 2) {
         printf(ERR_MSG);

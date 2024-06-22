@@ -33,14 +33,14 @@ SlaveInfo create_slave(char* command){
         return slave;
     }
 
-void distribute_tasks(int argc, char* argv[]) {
+void distribute_tasks( char* initial_input,char* command){
     if (argc < 3) {
         fprintf(stderr, "Usage: %s <command> <input>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    char *command = argv[1];
-    char *initial_input = argv[2];
+    char *command = command;
+    char *initial_input = initial_input;
 
     SlaveInfo slaves[MAX_SLAVES];
     for (int i = 0; i < MAX_SLAVES; i++) {
@@ -113,6 +113,6 @@ void distribute_tasks(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    distribute_tasks(argc, argv);
+    distribute_tasks(argv[2],argv[1]);
     return 0;
 }
