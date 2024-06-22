@@ -28,52 +28,16 @@ int transform_mail(char * mail, char * command,char * toSave) {
 }
 
 int main (int argc, char *argv[]) {
-    if (argc < 3) {
+    if (argc < 2) {
         printf(ERR_MSG);
     }
     check_dir(INBOX);
     char * command = argv[1];
-    char * mail = malloc(strlen(argv[2]) + 1);
-    if (mail == NULL) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
-    strcpy(mail, argv[2]);
-    
-  
-    char * user = strtok(mail, "-");
-    if (user == NULL) {
-        fprintf(stderr, ERR_MSG);
-        free(mail);
-        exit(EXIT_FAILURE);
-    }
-
-    char * aux = strtok(NULL, "-");
-    if (aux == NULL) {
-        fprintf(stderr, ERR_MSG);
-        free(mail);
-        exit(EXIT_FAILURE);
-    }
-
-    char * toSave= malloc(strlen(INBOX) + strlen(aux) +strlen(user) + 2);
-     if (toSave == NULL) {
-        perror("malloc");
-        free(mail);
-        exit(EXIT_FAILURE);
-    }
-    strcpy(toSave, INBOX);
-    strcat(toSave, user);
-    check_dir(toSave);
-    strcat(toSave, "/");
-    strcat(toSave, aux);
-    char* com = malloc(strlen(argv[2]) + strlen(command) + strlen(toSave) + strlen(" 2> transform.err") + 5);
-    snprintf(com, 300, "%s %s > %s 2> transform.err", command, mail, toSave);
-    int transform = transform_mail(argv[2],command,toSave);
-    free(toSave);
-    if(transform == 0){
-        write(STDOUT_FILENO, SUCCESS, strlen(SUCCESS) + 1);
-    }
-
+    char * mail;
+    char * user;
+    char * aux;
+    char * toSave;
+    int transform;
     ssize_t nbytes;
     char inputBuffer[MAX_BUFFER_SIZE];  
     while ((nbytes = read(STDIN_FILENO, inputBuffer, sizeof(inputBuffer) - 1)) > 0) {
@@ -103,7 +67,7 @@ int main (int argc, char *argv[]) {
         free(mail);
         free(toSave);
         if(transform == 0){
-        write(STDOUT_FILENO, SUCCESS, strlen(SUCCESS) + 1);
+            write(STDOUT_FILENO, SUCCESS, strlen(SUCCESS) + 1);
         } else{
             write(STDOUT_FILENO,FAILURE,strlen(FAILURE)+1);
         }
