@@ -11,6 +11,8 @@
 #include <sys/wait.h>
 #include <sys/select.h>
 #define MAX_BUFFER_SIZE 1049
+#define SUCCESS "254 \n"
+#define FAILURE "255 \n"
 
 
 
