@@ -10,6 +10,11 @@
 #define __SOCK_TYPES_H__
 
 #include <stddef.h>     // NULL
+#include <unistd.h>     // close(), write()
+#include <sys/socket.h> // accept(), recv()
+#include <sys/types.h>
+#include "logger.h"
+#include "selector.h"
 
 /**
  * \enum        HandlerErrors: errors returned by socket READ / WRITE handlers.
@@ -25,19 +30,40 @@ typedef enum{
 /***********************************************************************************************/
 
 /**
- * \brief       Handle new connection requests from a server socket (a passive socket listening
+ * \brief       Handle new connection requests from an IPv4 server socket (a passive socket listening
  *              for new connections).
  * 
  * \details     Accepts those new connections and adds them to the Selector to perform a WRITE
  *              operation (as it is part of SMTP's RFC).
+ *              This function attempts to accept all pending connections until `accept (2)` returns
+ *              EWOULDBLOCK. For this reason, it is crucial that the server socket is set as non
+ *              blocking using `fcntl (2)` and option `O_NONBLOCK`.
  * 
  * \param[in] fd        The server socket file descriptor to which perform an accept (2).
- * \param[in] selector  The Selector to add the connection to after accepting it.
+ * \param[in] _         Unused parameter.
  * 
  * \return      Returns any of the following error codes:
  *              - HANDLER_OK
  */
-HandlerErrors handle_server          (int fd, void * selector);
+HandlerErrors handle_server4            (int fd, void * _);
+
+/**
+ * \brief       Handle new connection requests from n IPv6 server socket (a passive socket listening
+ *              for new connections).
+ * 
+ * \details     Accepts those new connections and adds them to the Selector to perform a WRITE
+ *              operation (as it is part of SMTP's RFC).
+ *              This function attempts to accept all pending connections until `accept (2)` returns
+ *              EWOULDBLOCK. For this reason, it is crucial that the server socket is set as non
+ *              blocking using `fcntl (2)` and option `O_NONBLOCK`.
+ * 
+ * \param[in] fd        The server socket file descriptor to which perform an accept (2).
+ * \param[in] _         Unused parameter.
+ * 
+ * \return      Returns any of the following error codes:
+ *              - HANDLER_OK
+ */
+HandlerErrors handle_server6            (int fd, void * _);
 
 /**
  * \brief       Handle client incoming data (a READ operation to the client's socket).
@@ -48,7 +74,7 @@ HandlerErrors handle_server          (int fd, void * selector);
  * \return      Returns any of the following error codes:
  *              - HANDLER_OK
  */
-HandlerErrors handle_client_read     (int fd, void * data);
+HandlerErrors handle_client_read        (int fd, void * data);
 
 /**
  * \brief       Handle a new command from the manager.
@@ -59,7 +85,7 @@ HandlerErrors handle_client_read     (int fd, void * data);
  * \return      Returns any of the following error codes:
  *              - HANDLER_OK
  */
-HandlerErrors handle_manager_read    (int fd, void * data);
+HandlerErrors handle_manager_read       (int fd, void * data);
 
 /***********************************************************************************************/
 /* Write handler declarations                                                                  */
@@ -74,7 +100,7 @@ HandlerErrors handle_manager_read    (int fd, void * data);
  * \return      Returns any of the following error codes:
  *              - HANDLER_OK
  */
-HandlerErrors handle_client_write    (int fd, void * data);
+HandlerErrors handle_client_write       (int fd, void * data);
 
 /**
  * \brief       Handle a command response to the manager.
@@ -85,7 +111,7 @@ HandlerErrors handle_client_write    (int fd, void * data);
  * \return      Returns any of the following error codes:
  *              - HANDLER_OK
  */
-HandlerErrors handle_manager_write   (int fd, void * data);
+HandlerErrors handle_manager_write      (int fd, void * data);
 
 /***********************************************************************************************/
 /* Custom data type definitions                                                                */
@@ -120,7 +146,8 @@ typedef HandlerErrors (* SockWriteHandler) (int, void *);
 /*  XX(SOCKET_TYPE,             READ_HANDLER,                   WRITE_HANDLER               ) */
 
 #define SOCK_TYPES_AND_HANDLERS(XX)                                                           \
-    XX(SOCK_TYPE_SERVER,        handle_server,                  NULL                        ) \
+    XX(SOCK_TYPE_SERVER4,       handle_server4,                 NULL                        ) \
+    XX(SOCK_TYPE_SERVER6,       handle_server6,                 NULL                        ) \
     XX(SOCK_TYPE_CLIENT,        handle_client_read,             handle_client_write         ) \
     XX(SOCK_TYPE_MANAGER,       handle_manager_read,            handle_manager_write        )
 

@@ -186,8 +186,7 @@ SelectorErrors Selector_remove(Selector const self,
  * \return      Can return the following error codes (see Selector Errors enumeration):
  *              1. SELECTOR_OK
  *              2. SELECTOR_INVALID
- *              3. SELECTOR_NO_MEMORY
- *              4. SELECTOR_SELECT_ERR
+ *              3. SELECTOR_SELECT_ERR
 */
 SelectorErrors Selector_select(Selector const self);
 

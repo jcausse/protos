@@ -24,7 +24,7 @@
 /**
  * \todo esto deberia salir de la configuracion
  */
-#define CONFIG_PORT             2222
+#define CONFIG_PORT             2525
 #define CONFIG_BACKLOG_SIZE     10
 #define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log"
 #define CONFIG_LOG_LEVEL        LOGGER_LEVEL_DEBUG
@@ -49,17 +49,25 @@ extern SockWriteHandler write_handlers[];
 
 /**
  * \brief       Initializes SMTPD.
- * 
- * \return      true if successfully initialized, false otherwise.
  */
-bool smtpd_init();
+static void smtpd_init(void);
 
 /**
- * \brief       Starts SMTPD after initialization.
- * 
- * \return      On success, this function does not return. On failure, returns false.
+ * \brief       Starts SMTPD after initialization. This function only returns if an error occurs.
  */
-bool smtpd_start();
+static void smtpd_start(void);
+
+/**
+ * \brief       Cleanup resources and exit with code `exit_code`.
+ * 
+ * \param[in] exit_code Integer passed to exit (3).
+ */
+static void smtpd_cleanup(int exit_code);
+
+/**
+ * \brief       Abort execution. Performs cleanup and exites with code `EXIT_FAILURE`.
+ */
+static void smtpd_abort(void);
 
 /**
  * \brief       Captures SIGINT signal to gracefully stop SMTPD.
@@ -74,23 +82,18 @@ void sigint_handler(int sigint);
 /* Main function                                                */
 /****************************************************************/
 
-int main(int argc, char ** argv){
-    /**
-     * \todo argumentos
-     */
-    (void) argc;
-    (void) argv;
-    if (smtpd_init()){
-        smtpd_start();
-    }
-    return EXIT_FAILURE;
+int main(void){
+    smtpd_init();                       // Initialize SMTPD.
+    smtpd_start();                      // Start SMTPD. Only returns on error.
+    smtpd_abort();                      // Cleanup on error.
+    return EXIT_FAILURE;                // Never reached.
 }
 
 /****************************************************************/
 /* Private function definitions                                 */
 /****************************************************************/
 
-bool smtpd_init(){
+static void smtpd_init(void){
     /* Set SIGINT handler */
     signal(SIGINT, sigint_handler);
 
@@ -104,7 +107,7 @@ bool smtpd_init(){
         .with_datetime      = true,     // Include date and time in logs
         .with_level         = true,     // Include log levels
         .flush_immediately  = true,     // Disable buffering for real-time log viewing (tail -f)
-        .log_prefix         = NULL // "smtpd v1.0.0" \todo
+        .log_prefix         = NULL      // "smtpd v1.0.0" \todo
     };
 
     TRY{
@@ -113,7 +116,7 @@ bool smtpd_init(){
             (logger =
                 Logger_create(
                     logger_cfg,         // Logger configuration
-                    CONFIG_LOG_FILE            // Absolute path to the file that will hold the logs
+                    CONFIG_LOG_FILE     // Absolute path to the file that will hold the logs
                 )
             ) == NULL                   // Expected return: Logger (not NULL)
         );
@@ -122,8 +125,8 @@ bool smtpd_init(){
         /* Create passive sockets (server sockets) for IPv4 and IPv6 */
         THROW_IF_NOT(
             tcp_serve(
-                CONFIG_PORT,             // Port for SMTPD
-                CONFIG_BACKLOG_SIZE,           // Max quantity of pending (unaccepted) connections
+                CONFIG_PORT,            // Port for SMTPD
+                CONFIG_BACKLOG_SIZE,    // Max quantity of pending (unaccepted) connections
                 &sv_fd_4,               // IPv4 socket (output parameter)
                 &sv_fd_6                // IPv6 socket (output parameter)
             )
@@ -140,26 +143,26 @@ bool smtpd_init(){
                 selector,               // The Selector itself
                 sv_fd_4,                // File descriptor to add
                 SELECTOR_READ,          // Mode
-                SOCK_TYPE_SERVER,       // File descriptor type
+                SOCK_TYPE_SERVER4,      // File descriptor type
                 NULL                    // No data needed
             )
             == SELECTOR_OK              // Expected return: SELECTOR_OK
         );
-        LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sv_fd_4, SOCK_TYPE_SERVER);
+        LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sv_fd_4, SOCK_TYPE_SERVER4);
         THROW_IF_NOT(
             Selector_add(
                 selector,               // The Selector itself
                 sv_fd_6,                // File descriptor to add
                 SELECTOR_READ,          // Mode
-                SOCK_TYPE_SERVER,       // File descriptor type
+                SOCK_TYPE_SERVER6,      // File descriptor type
                 NULL                    // No data needed
             )
             == SELECTOR_OK              // Expected return: SELECTOR_OK
         );
-        LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sv_fd_6, SOCK_TYPE_SERVER);
+        LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sv_fd_6, SOCK_TYPE_SERVER6);
     }
     CATCH{
-        /* Could not create the logger*/
+        /* Could not create the logger */
         if (logger == NULL){
             if (errno == EACCES){
                 fprintf(stderr, MSG_ERR_EACCES, CONFIG_LOG_FILE);
@@ -168,7 +171,6 @@ bool smtpd_init(){
                 fprintf(stderr, MSG_ERR_NO_MEM);
             }
             fprintf(stderr, MSG_EXIT_FAILURE);
-            return false;
         }
 
         /* Could not create server socket */
@@ -181,32 +183,61 @@ bool smtpd_init(){
             LOG_ERR(MSG_ERR_NO_MEM);
         }
 
-        /* Log that SMTPD exited on error */
-        LOG_ERR(MSG_EXIT_FAILURE);
-
         /* Cleanup and exit */
         safe_close(sv_fd_4);
         safe_close(sv_fd_6);
-        Selector_cleanup(selector);
-        Logger_cleanup(logger);
-        return false;
+        smtpd_abort();
     }
-
-    return true;
 }
 
-bool smtpd_start(){
-    while (true) {
-        puts("aca!");
+static void smtpd_start(){
+    while (true){
+        /* Perform a select (2) operation */
+        LOG_DEBUG(MSG_DEBUG_SELECTOR_SELECT);
+        SelectorErrors err = Selector_select(selector);     // Blocking
+        if (err != SELECTOR_OK){
+            if (err == SELECTOR_SELECT_ERR){
+                LOG_ERR(MSG_ERR_SELECT);
+            }
+            smtpd_abort();
+        }
+        
+        /* Iterate through all ready file descriptors */
+        int     sock_fd;
+        int     sock_type;
+        void *  sock_data;
+        while ((sock_fd = Selector_read_next(selector, &sock_type, &sock_data)) != SELECTOR_NO_FD){
+            if (sock_type < 0 || sock_type >= SOCK_TYPE_QTY){
+                LOG_ERR(MSG_ERR_UNK_SOCKET_TYPE, sock_fd, sock_type);
+                continue;
+            }
+            LOG_DEBUG(MSG_DEBUG_SOCKET_READY, sock_data, "READ");
+            read_handlers[sock_type](sock_fd, sock_data);
+        }
+        while ((sock_fd = Selector_write_next(selector, &sock_type, &sock_data)) != SELECTOR_NO_FD){
+            if (sock_type < 0 || sock_type >= SOCK_TYPE_QTY){
+                LOG_ERR(MSG_ERR_UNK_SOCKET_TYPE, sock_fd, sock_type);
+                continue;
+            }
+            LOG_DEBUG(MSG_DEBUG_SOCKET_READY, sock_data, "WRITE");
+            write_handlers[sock_type](sock_fd, sock_data);
+        }
     }
+}
 
-    return false;
+static void smtpd_cleanup(int exit_code){
+    Selector_cleanup(selector);     // NULL-safe
+    Logger_cleanup(logger);         // NULL-safe
+    exit(exit_code);
+}
+
+static void smtpd_abort(){
+    LOG_ERR(MSG_EXIT_FAILURE);
+    smtpd_cleanup(EXIT_FAILURE);
 }
 
 void sigint_handler(int signum){
     (void) signum;                  // Avoids unused parameter warning
     LOG_MSG(MSG_EXIT_SIGINT);       // NULL-safe
-    Selector_cleanup(selector);     // NULL-safe
-    Logger_cleanup(logger);         // NULL-safe
-    exit(EXIT_SUCCESS);             // No error
+    smtpd_cleanup(EXIT_SUCCESS);    // No error occurred
 }
