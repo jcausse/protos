@@ -496,7 +496,7 @@ static int mailFromOkTransition(Parser * parser, char * command) {
         parser->structure->cmd = NOOP;
         return SUCCESS;
     }
-    else if(strncmp((command, QUIT_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == '\r') {
+    else if((strncmp(command, QUIT_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == '\r') {
         parser->machine->currentState = QUIT_ST;
         parser->status = strdup(QUIT_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
