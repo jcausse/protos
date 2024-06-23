@@ -29,6 +29,20 @@
 #define LOG_FILE "/home/juani/Desktop/smtpd.log"
 
 /****************************************************************/
+/* Global variables                                             */
+/****************************************************************/
+
+Logger      logger      = NULL;     // Logger (see src/lib/logger.h)
+Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
+
+/****************************************************************/
+/* Extern global variables                                      */
+/****************************************************************/
+
+extern SockReadHandler  read_handlers[];
+extern SockWriteHandler write_handlers[];
+
+/****************************************************************/
 /* Private function declarations                                */
 /****************************************************************/
 
@@ -54,13 +68,6 @@ bool smtpd_start();
  *                      signal number that triggered its call. In this case, SIGINT.
  */
 void sigint_handler(int sigint);
-
-/****************************************************************/
-/* Global variables                                             */
-/****************************************************************/
-
-Logger      logger      = NULL;     // Logger (see src/lib/logger.h)
-Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
 
 /****************************************************************/
 /* Main function                                                */
@@ -121,7 +128,7 @@ bool smtpd_init(){
         );                              // Expected return: true
 
         /* Create Selector */
-        THROW_IF_NOT(selector = Selector_create(free))
+        THROW_IF((selector = Selector_create(free)) == NULL)
 
         /* Add both of the server sockets to the Selector */
         THROW_IF_NOT(
@@ -130,7 +137,7 @@ bool smtpd_init(){
                 sv_fd_4,                // File descriptor to add
                 SELECTOR_READ,          // Mode
                 SOCK_TYPE_SERVER,       // File descriptor type
-                (void *) selector       // Selector passed as data
+                NULL                    // No data needed
             )
             == SELECTOR_OK              // Expected return: SELECTOR_OK
         );
@@ -140,7 +147,7 @@ bool smtpd_init(){
                 sv_fd_6,                // File descriptor to add
                 SELECTOR_READ,          // Mode
                 SOCK_TYPE_SERVER,       // File descriptor type
-                (void *) selector       // Selector passed as data
+                NULL                    // No data needed
             )
             == SELECTOR_OK              // Expected return: SELECTOR_OK
         );
@@ -184,21 +191,16 @@ bool smtpd_init(){
 
 bool smtpd_start(){
     while (true) {
-        /**
-         * \todo
-         */
+        
     }
 
     return false;
 }
 
 void sigint_handler(int signum){
-    (void) signum;  // Avoids unused parameter warning
-    if (selector != NULL){
-        Selector_cleanup(selector);
-    }
-    if (logger != NULL){
-        LOG_MSG(MSG_EXIT_SIGINT);
-    }
-    exit(EXIT_SUCCESS);
+    (void) signum;                  // Avoids unused parameter warning
+    LOG_MSG(MSG_EXIT_SIGINT);       // NULL-safe
+    Selector_cleanup(selector);     // NULL-safe
+    Logger_cleanup(logger);         // NULL-safe
+    exit(EXIT_SUCCESS);             // No error
 }

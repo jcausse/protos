@@ -6,12 +6,34 @@
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
  */
 
-#define __SOCK_TYPES_HANDLERS_C__
-
 #include "sock_types_handlers.h"
 
 /***********************************************************************************************/
-/* Read handler declarations                                                                   */
+/* Read / Write handler pointer arrays                                                         */
+/***********************************************************************************************/
+
+/**
+ *              Read handlers for each socket type
+ */
+SockReadHandler read_handlers[] = {
+    #define XX(sock_type_numeric, sock_read_handler, sock_write_handler) sock_read_handler,
+    SOCK_TYPES_AND_HANDLERS(XX)
+    #undef XX
+    NULL
+};
+
+/**
+ *              Write handlers for each socket type
+ */
+SockWriteHandler write_handlers[] = {
+    #define XX(sock_type_numeric, sock_read_handler, sock_write_handler) sock_write_handler,
+    SOCK_TYPES_AND_HANDLERS(XX)
+    #undef XX
+    NULL
+};
+
+/***********************************************************************************************/
+/* Read handler definitions                                                                    */
 /***********************************************************************************************/
 
 /**
@@ -42,7 +64,7 @@ HandlerErrors handle_manager_read (int fd, void * data){
 }
 
 /***********************************************************************************************/
-/* Write handler declarations                                                                  */
+/* Write handler definitions                                                                   */
 /***********************************************************************************************/
 
 /**
@@ -62,5 +84,3 @@ HandlerErrors handle_manager_write (int fd, void * data){
     (void) data;
     return HANDLER_OK;
 }
-
-#undef __SOCK_TYPES_HANDLERS_C__
