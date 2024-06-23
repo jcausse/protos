@@ -65,7 +65,7 @@ int tcp_connect(const char * restrict ip, uint16_t port, bool ipv6, bool keep_al
 
 bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int * const ipv6_sockfd){
     int ipv4_fd = -1, ipv6_fd = -1;
-    int optval = 1;                         // Value used for socket option SO_REUSEADDR
+    const int optval = 1;                   // Value used for socket option SO_REUSEADDR
     struct linger linger_optval = {1, 0};   // Value used for socket option SO_LINGER
 
     TRY{
@@ -97,6 +97,9 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
         /* Set IPv6 socket options */
         THROW_ON_ERR(setsockopt(ipv6_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)));
         THROW_ON_ERR(setsockopt(ipv6_fd, SOL_SOCKET, SO_LINGER, &linger_optval, sizeof(linger_optval)));
+
+        /* Disable dual stack to avoid conflict with IPv4 socket */
+        THROW_ON_ERR(setsockopt(ipv6_fd, IPPROTO_IPV6, IPV6_V6ONLY, &optval, sizeof(optval)));
 
         /* Bind IPv6 socket */
         struct sockaddr_in6 addr6;
