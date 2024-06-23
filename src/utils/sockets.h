@@ -19,6 +19,7 @@
 #include <stdbool.h>        // bool
 #include <unistd.h>         // close()
 #include <errno.h>          // errno
+#include <fcntl.h>          // fcntl()
 #include "exceptions.h"     // TRY, THROW_IF, CATCH
 
 /*************************************************************************/

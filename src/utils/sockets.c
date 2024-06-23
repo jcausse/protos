@@ -64,7 +64,7 @@ int tcp_connect(const char * restrict ip, uint16_t port, bool ipv6, bool keep_al
 }
 
 bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int * const ipv6_sockfd){
-    int ipv4_fd = -1, ipv6_fd = -1;
+    int ipv4_fd = -1, ipv6_fd = -1, flags;
     const int optval = 1;                   // Value used for socket option SO_REUSEADDR
     struct linger linger_optval = {1, 0};   // Value used for socket option SO_LINGER
 
@@ -89,6 +89,11 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
         /* Listen on IPv4 socket */
         THROW_ON_ERR(listen(ipv4_fd, backlog));
 
+        /* Set IPv4 socket to non-blocking mode */
+        flags;
+        THROW_ON_ERR(flags = fcntl(ipv4_fd, F_GETFL, 0));
+        THROW_ON_ERR(fcntl(ipv4_fd, F_SETFL, flags | O_NONBLOCK));
+
         /******************** IP v6 ********************/
 
         /* Create IPv6 socket */
@@ -108,6 +113,11 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
         addr6.sin6_addr = in6addr_any;
         addr6.sin6_port = htons(port);
         THROW_ON_ERR(bind(ipv6_fd, (struct sockaddr *)&addr6, sizeof(addr6)));
+
+        /* Set IPv6 socket to non-blocking mode */
+        flags;
+        THROW_ON_ERR(flags = fcntl(ipv6_fd, F_GETFL, 0));
+        THROW_ON_ERR(fcntl(ipv6_fd, F_SETFL, flags | O_NONBLOCK));
 
         /* Listen on IPv6 socket */
         THROW_ON_ERR(listen(ipv6_fd, backlog));
