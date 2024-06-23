@@ -3,6 +3,14 @@
  * \brief       Implementation of a Logger, and macros to easily log
  *              messages to it.
  * 
+ * \note        For further optimization, to use the macro `LOG_DEBUG()`, 
+ *              the constant `__USE_DEBUG_LOGS__` must be defined at compile-time.
+ *              Independently of the value passed to `LoggerConfig.min_log_level`,
+ *              said macro expands empty when `__USE_DEBUG_LOGS__` is not defined
+ *              in order to optimize production executables.
+ *              All direct calls to `Logger_log()` with `LOGGER_LEVEL_DEBUG` passed
+ *              as `level` do log debug messages without said constant defined.
+ * 
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
  */
@@ -40,8 +48,11 @@
  *              function. It is required to have a reference to the Logger to be used
  *              (that is, a variable of type Logger), called "logger" to use these macros.
  */
-
+#ifdef __USE_DEBUG_LOGS__
 #define LOG_DEBUG(...)     Logger_log(logger, LOGGER_LEVEL_DEBUG,    __VA_ARGS__)
+#else // __USE_DEBUG_LOGS__ not defined
+#define LOG_DEBUG(...)
+#endif // __USE_DEBUG_LOGS__
 #define LOG_VERBOSE(...)   Logger_log(logger, LOGGER_LEVEL_INFO,     __VA_ARGS__)
 #define LOG_MSG(...)       Logger_log(logger, LOGGER_LEVEL_NORMAL,   __VA_ARGS__)
 #define LOG_ERR(...)       Logger_log(logger, LOGGER_LEVEL_CRITICAL, __VA_ARGS__)
@@ -64,9 +75,9 @@ typedef struct _Logger_t * Logger;
  *  LOGGER_LEVEL_CRITICAL:  Errors only
  */
 #define LOG_LEVELS(XX)                        \
-    XX(LOGGER_LEVEL_DEBUG,      "DEBUG"     ) \
-    XX(LOGGER_LEVEL_INFO,       "INFO"      ) \
-    XX(LOGGER_LEVEL_NORMAL,     "NORMAL"    ) \
+    XX(LOGGER_LEVEL_DEBUG,      " DEBUG  "  ) \
+    XX(LOGGER_LEVEL_INFO,       "  INFO  "  ) \
+    XX(LOGGER_LEVEL_NORMAL,     " NORMAL "  ) \
     XX(LOGGER_LEVEL_CRITICAL,   "CRITICAL"  )
 
 /**

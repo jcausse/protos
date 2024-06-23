@@ -1,4 +1,4 @@
-CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -fsanitize=address -I ../lib/
+CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -I ../lib/
 UTILS := args.o selector.o sockets.o
 
 .PHONY: all clean

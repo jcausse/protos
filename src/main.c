@@ -24,9 +24,10 @@
 /**
  * \todo esto deberia salir de la configuracion
  */
-#define SMTPD_PORT      2222
-#define BACKLOG_SIZE    10
-#define LOG_FILE "/home/juani/Desktop/smtpd.log"
+#define CONFIG_PORT             2222
+#define CONFIG_BACKLOG_SIZE     10
+#define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log"
+#define CONFIG_LOG_LEVEL        LOGGER_LEVEL_DEBUG
 
 /****************************************************************/
 /* Global variables                                             */
@@ -99,11 +100,11 @@ bool smtpd_init(){
 
     /* Logger configuration */
     LoggerConfig logger_cfg = {
-        .min_log_level      = LOGGER_DEFAULT_MIN_LOG_LEVEL, // Minimum log level
+        .min_log_level      = CONFIG_LOG_LEVEL, // Minimum log level
         .with_datetime      = true,     // Include date and time in logs
         .with_level         = true,     // Include log levels
         .flush_immediately  = true,     // Disable buffering for real-time log viewing (tail -f)
-        .log_prefix         = "smtpd v1.0.0"
+        .log_prefix         = NULL // "smtpd v1.0.0" \todo
     };
 
     TRY{
@@ -112,23 +113,26 @@ bool smtpd_init(){
             (logger =
                 Logger_create(
                     logger_cfg,         // Logger configuration
-                    LOG_FILE            // Absolute path to the file that will hold the logs
+                    CONFIG_LOG_FILE            // Absolute path to the file that will hold the logs
                 )
             ) == NULL                   // Expected return: Logger (not NULL)
         );
+        LOG_VERBOSE(MSG_INFO_LOGGER_CREATED);
 
         /* Create passive sockets (server sockets) for IPv4 and IPv6 */
         THROW_IF_NOT(
             tcp_serve(
-                SMTPD_PORT,             // Port for SMTPD
-                BACKLOG_SIZE,           // Max quantity of pending (unaccepted) connections
+                CONFIG_PORT,             // Port for SMTPD
+                CONFIG_BACKLOG_SIZE,           // Max quantity of pending (unaccepted) connections
                 &sv_fd_4,               // IPv4 socket (output parameter)
                 &sv_fd_6                // IPv6 socket (output parameter)
             )
         );                              // Expected return: true
+        LOG_VERBOSE(MSG_INFO_SV_SOCKET_CREATED, CONFIG_PORT);
 
         /* Create Selector */
         THROW_IF((selector = Selector_create(free)) == NULL)
+        LOG_VERBOSE(MSG_INFO_SELECTOR_CREATED);
 
         /* Add both of the server sockets to the Selector */
         THROW_IF_NOT(
@@ -141,6 +145,7 @@ bool smtpd_init(){
             )
             == SELECTOR_OK              // Expected return: SELECTOR_OK
         );
+        LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sv_fd_4, SOCK_TYPE_SERVER);
         THROW_IF_NOT(
             Selector_add(
                 selector,               // The Selector itself
@@ -151,12 +156,13 @@ bool smtpd_init(){
             )
             == SELECTOR_OK              // Expected return: SELECTOR_OK
         );
+        LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sv_fd_6, SOCK_TYPE_SERVER);
     }
     CATCH{
         /* Could not create the logger*/
         if (logger == NULL){
             if (errno == EACCES){
-                fprintf(stderr, MSG_ERR_EACCES, LOG_FILE);
+                fprintf(stderr, MSG_ERR_EACCES, CONFIG_LOG_FILE);
             }
             else if (errno == ENOMEM){
                 fprintf(stderr, MSG_ERR_NO_MEM);
@@ -191,7 +197,7 @@ bool smtpd_init(){
 
 bool smtpd_start(){
     while (true) {
-        
+        puts("aca!");
     }
 
     return false;

@@ -9,7 +9,7 @@
 # -std=c11						: Use C11
 # -D_POSIX_C_SOURCE=200112L 	: Posix version
 
-CFLAGS := -std=c11 -pedantic -pedantic-errors -g -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -fsanitize=address -I ./lib -I ./utils
+CFLAGS := -std=c11 -pedantic -pedantic-errors -g -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -I ./lib -I ./utils -D __USE_DEBUG_LOGS__
 LDFLAGS := -L./lib -L./utils
 LIBS := lib/hashmap.o lib/linkedlist.o lib/logger.o
 UTILS := utils/args.o utils/selector.o utils/sockets.o

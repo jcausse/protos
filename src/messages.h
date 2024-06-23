@@ -28,4 +28,18 @@
 #define MSG_ERR_SV_SOCKET       "Error opening server socket."
 #define MSG_ERR_NO_MEM          "Could not allocate memory."
 
+/********************************************************/
+/* Verbose log messages                                 */
+/********************************************************/
+
+#define MSG_INFO_LOGGER_CREATED      "Logger started"
+#define MSG_INFO_SV_SOCKET_CREATED   "Listening on port %d"
+#define MSG_INFO_SELECTOR_CREATED    "Selector started"
+
+/********************************************************/
+/* Debug log messages                                   */
+/********************************************************/
+
+#define MSG_DEBUG_SELECTOR_ADD      "Added fd %d (type %d) to Selector"
+
 #endif // __MESSAGES_H__

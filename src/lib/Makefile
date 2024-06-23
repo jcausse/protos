@@ -1,4 +1,4 @@
-CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -fsanitize=address
+CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L
 LIBS := hashmap.o linkedlist.o logger.o
 
 .PHONY: all clean
