@@ -760,8 +760,8 @@ int parseCmd(Parser * parser, char * command) {
 }
 
 /**
- * Destroys the parser, this should be done iif the server is
- * about to finish de service with the client, because all the
+ * Destroys the parser, this should be done if the server is
+ * about to finish the service with the client, because all the
  * inner parser state will be lost.
  */
 void destroy(Parser * parser) {
