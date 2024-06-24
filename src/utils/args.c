@@ -15,6 +15,7 @@
 
 #define PORT_MAX 65535
 
+#define PRODUCT_NAME        "smtpd"
 #define PRODUCT_VERSION     "0.1.0"
 
 #define ORGANIZATION        "ITBA, Protocolos de Comunicacion"
@@ -61,61 +62,131 @@ typedef enum {
 } ArgsErrors;
 
 /*************************************************************************/
+/* Private function declarations                                         */
+/*************************************************************************/
+
+/**
+ * \brief                       Removes a substring from a string. Used to remove the TO_TRANSFORM substring from the user name.
+ * 
+ * \param[in] string            Given string to clean.
+ * \param[in] sub               Substring to remove form the string.
+ *
+ * 
+ * \return                      void
+ */
+static void removeSubstr (char *string, char *sub);
+
+/**
+ * \brief       Prit usage.
+ * 
+ * \param[in] progname      Program name (argv[0]).
+ */
+static void usage(const char *progname);
+
+/**
+ * \brief       Print product version, authors, compilation date and other messages.
+ */
+static void version(void);
+
+/*************************************************************************/
+
+/**
+ * \note    The following code is part of the Library "libCinputs", that can be found at
+ *          https://github.com/jcausse/libcinputs
+ */
+
+static short    parse_short     (const char* str, int radix);
+static int      parse_int       (const char* str, int radix);
+static long     parse_long      (const char* str, int radix);
+
+/*************************************************************************/
 /* Public functions                                                      */
 /*************************************************************************/
 
-bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
-    if(argc < 9){
-        usage(argv[0]);
-    }
+parse_args(const int argc, char *argv, struct socks5argsargs) {
+    memset(args, 0, sizeof(*args));
 
-    int arg = 1;
+    args->socks_addr = "0.0.0.0";
+    args->socks_port = 1080;
 
-    char* cmd;
-    char c; 
-    while(arg < argc){
-        cmd = argv[arg];
-        c = removeSubstr(cmd, "-");
-        switch (c)
-        {
-        case 'd':
-            result->domain = argv[arg + 1];
-            arg += 2;
+    args->mng_addr   = "127.0.0.1";
+    args->mng_port   = 8080;
+
+    args->disectors_enabled = true;
+
+    int c;
+    int nusers = 0;
+
+    while (true) {
+        int option_index = 0;
+        static struct option long_options[] = {
+            { 0,           0,                 0, 0 }
+        };
+
+        c = getopt_long(argc, argv, "hl:L:Np:P:u:v", long_options, &option_index);
+        if (c == -1)
             break;
-        case 'm':
-            result->mail_directory = argv[arg + 1];
-            arg += 2;
-            break;
-        case 's':
-            uint16_t p = parse_short(argv[arg + 1],10);
-            result->smtp_port = p;
-            arg += 2;
-            break;
-        case 'p':
-            uint16_t p = parse_short(argv[arg + 1],10);
-            result->mngr_port = p;
-            arg += 2;
-            break;
-        case 't':
-            result->trsf_cmd = argv[arg + 1];
-            arg += 2;
-            break;
-        case 'f':
-            result->vrfy_mails = argv[arg + 1];
-            arg += 2;
-            break;
-        default:
-            break;
+
+        switch (c) {
+            case 'h':
+                usage(argv[0]);
+                break;
+            case 'l':
+                args->socks_addr = optarg;
+                break;
+            case 'L':
+                args->mng_addr = optarg;
+                break;
+            case 'N':
+                args->disectors_enabled = false;
+                break;
+            case 'p':
+                args->socks_port = port(optarg);
+                break;
+            case 'P':
+                args->mng_port   = port(optarg);
+                break;
+            case 'u':
+                if(nusers >= MAX_USERS) {
+                    fprintf(stderr, "maximun number of command line users reached: %d.\n", MAX_USERS);
+                    exit(1);
+                } else {
+                    user(optarg, args->users + nusers);
+                    nusers++;
+                }
+                break;
+            case 'v':
+                version();
+                exit(0);
+                break;
+            default:
+                fprintf(stderr, "unknown argument %d.\n", c);
+                exit(1);
         }
+
     }
-    return true;
+    if (optind < argc) {
+        fprintf(stderr, "argument not accepted: ");
+        while (optind < argc) {
+            fprintf(stderr, "%s ", argv[optind++]);
+        }
+        fprintf(stderr, "\n");
+        exit(1);
+    }
 }
 
-
-
 /*************************************************************************/
-/* Private functions                                                     */
+/* Private function definitions                                          */
 /*************************************************************************/
+
+static void removeSubstr (char *string, char *sub) {
+    char *match;
+    int len = strlen(sub);
+    while ((match = strstr(string, sub))) {
+        *match = '\0';
+        strcat(string, match+len);
+    }
+}
 
 static void usage(const char *progname) {
     fprintf(stderr,
@@ -139,14 +210,13 @@ static void version(void) {
             team_members_ids[i],
             team_members_last_names[i],
             team_members_first_names[i]
-        )
+        );
     }
 
     fprintf("Compiled on %s at %s\n", COMPILATION_DATE, COMPILATION_TIME);
 }
 
-
-/***********************************************************************************************/
+/*************************************************************************/
 
 /**
  * \note    The following code is part of the Library "libCinputs", that can be found at
@@ -197,4 +267,4 @@ static long parse_long(const char* str, int radix){
     return range_error || non_valid_error ? 0L : parsed;
 }
 
-/***********************************************************************************************/
+/*************************************************************************/
