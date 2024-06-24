@@ -6,6 +6,8 @@
 #ifndef __SMTPD_INFO_H__
 #define __SMTPD_INFO_H__
 
+#include <stdlib.h>
+
 /****************************************************************************/
 
 #define PRODUCT_NAME        "SMTPd"
