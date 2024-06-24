@@ -66,7 +66,12 @@ typedef enum {
 /*************************************************************************/
 
 bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
-    //TODO
+    memset(result, 0, sizeof(SMTPDArgs));
+    
+    // \todo hardcoded
+    result->mngr_port = 9090;
+    result->smtp_port = 2525;
+    
     return true;
 }
 

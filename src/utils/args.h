@@ -31,14 +31,23 @@
  *                  or its default values when not provided.
  */
 typedef struct {
-    char *   domain;         // Domain the server is going to be managing ("example.com").
-    uint16_t smtp_port;      // Port where the SMTP server will be listening to.
-    uint16_t mngr_port;      // Port where the management server will be listening to.
-    char *   mail_directory; // Path to the directory where the server is going to store the mails.
-    char *   trsf_cmd;       // Command for mail transformation.
-    char *   vrfy_mails;     // Where to find the verified mails.
-    bool     vryf_enabled;   // Enables or disables verification.
-    bool     trsf_enabled;   // Enables or disables transformation.
+    char *      domain;             // Domain the server is going to be managing ("example.com").
+    uint16_t    smtp_port;          // Port where the SMTP server will be listening to.
+    uint16_t    mngr_port;          // Port where the management server will be listening to.
+    char *      mail_directory;     // Path to the directory where the server is going to store the mails.
+    char *      trsf_cmd;           // Command for mail transformation.
+    char *      vrfy_mails;         // Where to find the verified mails.
+    bool        vryf_enabled;       // Enables or disables verification.
+    bool        trsf_enabled;       // Enables or disables transformation.
+
+    /**
+     * Minimum log level
+     * 
+     * required:    false
+     * default:     LOGGER_DEFAULT_MIN_LOG_LEVEL
+     * options:     LOGGER_LEVEL_DEBUG, LOGGER_LEVEL_INFO, LOGGER_LEVEL_NORMAL, LOGGER_LEVEL_CRITICAL
+     */
+    LogLevels   min_log_level;
 } SMTPDArgs;
 
 /*************************************************************************/

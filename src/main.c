@@ -18,14 +18,6 @@
 #include "messages.h"
 #include "args.h"
 
-/****************************************************************/
-/* SMTPD configuration                                          */
-/****************************************************************/
-
-/**
- * \todo esto deberia salir de la configuracion
- */
-#define CONFIG_PORT             2525
 #define CONFIG_BACKLOG_SIZE     10
 #define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log"
 #define CONFIG_LOG_LEVEL        LOGGER_LEVEL_DEBUG
@@ -263,3 +255,28 @@ void sigint_handler(int signum){
     LOG_MSG(MSG_EXIT_SIGINT);       // NULL-safe
     smtpd_cleanup(EXIT_SUCCESS);    // No error occurred
 }
+
+/*
+... Inicio
+compileRegexes();
+...
+Parser * parser = initParser(serverDomain);
+client->parser = parser;
+... fetch command
+int retStatus = parseCmd(parser, cmd);
+if(retStatus == TERMINAL){
+  ... free resources
+}
+if(retStatus == ERR){
+  writeClient(parser->status);
+}
+// the ret value is SUCCESS
+CommandStructure *str = parser->structure;
+switch(str->cmd){
+  case(HELO): persistDomain(str->heloDomain); break;
+  case(EHLO): persistEhloDomain(str->ehloDomain); break;
+  case(MAIL_FROM): writeInDomain(str->mailFromStr); break;
+  ...
+}
+writeClient(parser->status);
+ */
