@@ -10,9 +10,8 @@
 # -D_POSIX_C_SOURCE=200112L 	: Posix version
 
 CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -I ./lib -I ./utils -D __USE_DEBUG_LOGS__ -g
-LDFLAGS := -L./lib -L./utils
 LIBS := lib/hashmap.o lib/linkedlist.o lib/logger.o
-UTILS := utils/args.o utils/selector.o utils/sockets.o
+UTILS := utils/args.o utils/selector.o utils/sockets.o utils/parser.o utils/vrfy.o utils/transform/transform.o
 SRC_OBJS := main.o sock_types_handlers.o
 
 .PHONY: all clean
@@ -45,6 +44,12 @@ utils/selector.o:
 
 utils/sockets.o:
 	$(MAKE) -C utils sockets.o
+
+utils/parser.o:
+	$(MAKE) -C utils parser.o
+
+utils/vrfy.o:
+	$(MAKE) -C utils vrfy.o 
 
 clean:
 	- rm -f smtpd $(SRC_OBJS)
