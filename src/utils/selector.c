@@ -104,6 +104,14 @@ static int _Selector_next(Selector const self, LinkedList list, int * type, void
  */
 static void _Selector_free_cb(void * ptr);
 
+/**
+ * \brief       Callback used to close open file descriptors.
+ * 
+ * \param[in] fd        File descriptor to close
+ * \param[in] ignored   Ignored parameter
+ */
+static void _Selector_fd_close_cb(int fd, void * ignored);
+
 /*************************************************************************/
 /* HashMap callbacks                                                     */
 /*************************************************************************/
@@ -116,11 +124,11 @@ static bool key_equals(const uint16_t key1, const uint16_t key2);
 /*************************************************************************/
 
 Selector Selector_create(SelectorDataCleanupCallback data_free_cb){
-    return Selector_create_timeout(-1, data_free_cb);
+    return Selector_create_timeout(SELECTOR_NO_TIMEOUT, data_free_cb);
 }
 
 Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_free_cb){
-    if (timeout != -1 && timeout < 1){
+    if (timeout != SELECTOR_NO_TIMEOUT && timeout < 1){
         return NULL;
     }
     Selector self = NULL;
@@ -145,15 +153,13 @@ Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_f
         return NULL;
     }
     self->data_free_fn = data_free_cb;
-    if (timeout == -1){
+    if (timeout == SELECTOR_NO_TIMEOUT){
         self->use_timeout = false;
     }
     else{
         self->use_timeout = true;
         self->timeout.tv_sec = timeout;
     }
-    self->read_ready  = NULL;
-    self->write_ready = NULL;
     return self;
 }
 
@@ -326,7 +332,7 @@ SelectorErrors Selector_remove(Selector const self,
         /* Remove the file descriptor data */
         void * data = NULL;
         HashMap_pop(self->fd_data,  fd, &data);
-        if (type != NULL && free_data){
+        if (type != NULL && free_data && self->data_free_fn != NULL){
             self->data_free_fn(data);
         }
     }
@@ -405,6 +411,10 @@ void Selector_cleanup(Selector self){
         return;
     }
 
+    /* Close all file descriptors */
+    LinkedList_foreach(&(self->read_fds),  _Selector_fd_close_cb, NULL);
+    LinkedList_foreach(&(self->write_fds), _Selector_fd_close_cb, NULL);
+
     /* Clear LinkedLists */
     LinkedList_cleanup(self->read_fds);
     LinkedList_cleanup(self->write_fds);
@@ -472,6 +482,11 @@ static int _Selector_next(Selector const self, LinkedList list, int * type, void
 
 static void _Selector_free_cb(void * ptr){
     SELECTOR_FREE(ptr);
+}
+
+static void _Selector_fd_close_cb(int fd, void * ignored){
+    (void) ignored;     // Avoids unused parameter warnings
+    close(fd);
 }
 
 /*************************************************************************/

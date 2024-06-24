@@ -14,8 +14,9 @@
 #ifndef __SELECTOR_H__
 #define __SELECTOR_H__
 
-#include <stdbool.h>
-#include <sys/select.h>
+#include <stdbool.h>        // bool, true, false
+#include <sys/select.h>     // select()
+#include <unistd.h>         // close()
 #include "hashmap.h"
 #include "linkedlist.h"
 #include "exceptions.h"
@@ -40,6 +41,8 @@
 #define SELECTOR_MEMCPY(dest, src, n) memcpy((dest), (src), (n))
 
 /*************************************************************************/
+
+#define SELECTOR_NO_TIMEOUT -1
 
 /**
  * \typedef     Selector main Abstract Data Type.
@@ -81,7 +84,7 @@ typedef enum {
 /**
  * \brief       Creates a new Selector with no timeout (*Selector_select* will block until
  *              any file descriptor becomes ready).
- * \details     Calling this function is equivalent to *Selector_create_timeout(-1, data_free_cb)*.
+ * \details     Calling this function is equivalent to *Selector_create_timeout(SELECTOR_NO_TIMEOUT, data_free_cb)*.
  * 
  * \param[in] data_free_cb  Callback used to free file descriptor data when a file descriptor is
  *                          removed from the Selector, or when performing a cleanup.
@@ -185,8 +188,7 @@ SelectorErrors Selector_remove(Selector const self,
  * \return      Can return the following error codes (see Selector Errors enumeration):
  *              1. SELECTOR_OK
  *              2. SELECTOR_INVALID
- *              3. SELECTOR_NO_MEMORY
- *              4. SELECTOR_SELECT_ERR
+ *              3. SELECTOR_SELECT_ERR
 */
 SelectorErrors Selector_select(Selector const self);
 
@@ -228,7 +230,8 @@ int Selector_write_next(Selector const self, int * type, void ** data);
 
 /**
  * \brief       Cleanup the Selector structures and release all memory allocated for
- *              associated data.
+ *              associated data. Attempts to close every file descriptor it contains,
+ *              but ignores any errors that may arise.
  * 
  * \param[in] self          The Selector itself, returned by Selector_create.
 */

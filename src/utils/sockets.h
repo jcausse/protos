@@ -18,6 +18,8 @@
 #include <string.h>         // memset()
 #include <stdbool.h>        // bool
 #include <unistd.h>         // close()
+#include <errno.h>          // errno
+#include <fcntl.h>          // fcntl()
 #include "exceptions.h"     // TRY, THROW_IF, CATCH
 
 /*************************************************************************/
@@ -36,7 +38,7 @@
  * \param[in] keep_alive    Enable TCP Keep Alive for this socket.
  * \param[in] rst           Send RST instead of FIN when closing the connection.
  * 
- * \return      Socket file descriptor on success, SOCK_FAIL on failure.
+ * \return      Socket file descriptor on success, `SOCK_FAIL` on failure.
  */
 int tcp_connect(
     const char * restrict ip,
@@ -54,7 +56,7 @@ int tcp_connect(
  * \param[out] ipv4_sockfd  IPv4 socket file descriptor.
  * \param[out] ipv6_sockfd  IPv6 socket file descriptor.
  * 
- * \return      true on success, false on failure.
+ * \return      `true` on success, `false` on failure.
  */
 bool tcp_serve(
     uint16_t port,
@@ -62,5 +64,16 @@ bool tcp_serve(
     int * const ipv4_sockfd,
     int * const ipv6_sockfd
 );
+
+/**
+ * \brief       Closes a file descriptor if it is greater or equal to 0.
+ * 
+ * \details     If a signal interrupts the call to close (2), this
+ *              function attempts to close the file descriptor again. Up
+ *              to 5 retries.
+ * 
+ * \param[in] fd          The file descriptor to close.
+ */
+void safe_close(int fd);
 
 #endif // __SOCKETS_H_2hf9742bc23__
