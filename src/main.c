@@ -141,7 +141,7 @@ static void smtpd_init(void){
         LOG_VERBOSE(MSG_INFO_SV_SOCKET_CREATED, CONFIG_PORT);
 
         /* Create Selector */
-        THROW_IF((selector = Selector_create(free)) == NULL)
+        THROW_IF((selector = Selector_create(free)) == NULL) // \todo data free fn
         LOG_VERBOSE(MSG_INFO_SELECTOR_CREATED);
 
         /* Add both of the server sockets to the Selector */
@@ -215,6 +215,7 @@ static void smtpd_start(){
         void *  sock_data;
         while ((sock_fd = Selector_read_next(selector, &sock_type, &sock_data)) != SELECTOR_NO_FD){
             if (sock_type < 0 || sock_type >= SOCK_TYPE_QTY){
+                Selector_remove(selector, sock_fd, SELECTOR_READ_WRITE, true);
                 LOG_ERR(MSG_ERR_UNK_SOCKET_TYPE, sock_fd, sock_type);
                 continue;
             }
@@ -223,6 +224,7 @@ static void smtpd_start(){
         }
         while ((sock_fd = Selector_write_next(selector, &sock_type, &sock_data)) != SELECTOR_NO_FD){
             if (sock_type < 0 || sock_type >= SOCK_TYPE_QTY){
+                Selector_remove(selector, sock_fd, SELECTOR_READ_WRITE, true);
                 LOG_ERR(MSG_ERR_UNK_SOCKET_TYPE, sock_fd, sock_type);
                 continue;
             }
