@@ -17,9 +17,10 @@
 #include "exceptions.h"
 #include "messages.h"
 #include "args.h"
+#include "parser.h"
 
-#define CONFIG_BACKLOG_SIZE     10
-#define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log"
+#define BACKLOG_SIZE            10
+#define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log" // \todo HARDCODED
 
 /****************************************************************/
 /* Global variables                                             */
@@ -109,6 +110,9 @@ static void smtpd_init(SMTPDArgs * const args){
         .log_prefix         = PRODUCT_NAME " v" PRODUCT_VERSION     // Product info as log prefix
     };
 
+    /* Status */
+    bool comp_regex = false;
+
     TRY{
         /* Set SIGINT handler */
         signal(SIGINT, sigint_handler);
@@ -129,11 +133,16 @@ static void smtpd_init(SMTPDArgs * const args){
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
 
+        /* Compile SMTP parser regexes */
+        THROW_IF(compileRegexes() != SUCCESS);
+        LOG_VERBOSE(MSG_INFO_REGEX_COMPILED);
+        comp_regex = true;
+
         /* Create passive sockets (server sockets) for IPv4 and IPv6 */
         THROW_IF_NOT(
             tcp_serve(
                 args->smtp_port,        // Port for SMTPD
-                CONFIG_BACKLOG_SIZE,    // Max quantity of pending (unaccepted) connections
+                BACKLOG_SIZE,           // Max quantity of pending (unaccepted) connections
                 &sv_fd_4,               // IPv4 socket (output parameter)
                 &sv_fd_6                // IPv6 socket (output parameter)
             )
@@ -198,6 +207,11 @@ static void smtpd_init(SMTPDArgs * const args){
                 fprintf(stderr, MSG_ERR_NO_MEM);
             }
             fprintf(stderr, MSG_EXIT_FAILURE);
+        }
+
+        /* Could not compile regex */
+        else if (! comp_regex){
+            LOG_ERR(MSG_ERR_REGEX_COMPILATION);
         }
 
         /* Could not create server socket */

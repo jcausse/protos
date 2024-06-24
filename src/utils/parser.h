@@ -42,7 +42,7 @@ typedef struct StateMachine * StateMachinePtr;
 /**
  * Basic structure of the parser, needs to be instantiated,
  * after the parser modifies its state, the command structure
- * will change, so the structure field MUST me processed before parsing
+ * will change, so the structure field MUST be processed before parsing
  * another command. It is suggested to copy that information with a
  * function such as strdup or anything that will garantee that
  * the string will not be lost.
