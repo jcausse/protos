@@ -11,11 +11,19 @@
 /* Public functions                                                      */
 /*************************************************************************/
 
+static char removeSubstr (char *string, char *sub) {
+    char *match;
+    int len = strlen(sub);
+    while ((match = strstr(string, sub))) {
+        *match = '\0';
+        strcat(string, match+len);
+    }
+    return *string;
+}
 
 // TODO REFACTOR
-void parse_args(const int argc, char **argv, struct socks5args *args) {
-    memset(args, 0, sizeof(*args)); // sobre todo para setear en null los punteros de users
-
+bool parse_args(int argc, char ** argv, struct smtpd_args * const result){
+/*
     args->socks_addr = "0.0.0.0";
     args->socks_port = 1080;
 
@@ -83,6 +91,50 @@ void parse_args(const int argc, char **argv, struct socks5args *args) {
         fprintf(stderr, "\n");
         exit(1);
     }
+    */
+    if(argc < 9){
+        usage(argv[0]);
+    }
+
+    int arg = 1;
+
+    char* cmd;
+    char c; 
+    while(arg < argc){
+        cmd = argv[arg];
+        c = removeSubstr(cmd, "-");
+        switch (c)
+        {
+        case 'd':
+            *result->domain = argv[arg + 1];
+            arg += 2;
+            break;
+        case 'm':
+            *result->mail_directory = argv[arg + 1];
+            arg += 2;
+            break;
+        case 's':
+            unsigned short port = port_check(argv[arg + 1]);
+            *result->smtp_port = port;
+            arg += 2;
+            break;
+        case 'p':
+            unsigned short port = port_check(argv[arg + 1]);
+            *result->mng_port = port;
+            arg += 2;
+            break;
+        case 't':
+            *result->trsf_cmd = argv[arg + 1];
+            arg += 2;
+            break;
+        case 'f':
+            *result->vrfy_mails = argv[arg + 1];
+            arg += 2;
+            break;
+        default:
+            break;
+        }
+    }
 }
 
 /*************************************************************************/
@@ -91,15 +143,10 @@ void parse_args(const int argc, char **argv, struct socks5args *args) {
 
 static void usage(const char *progname) {
     fprintf(stderr,
-        "Usage: %s [OPTION]...\n"
+        "Usage: %s -d <DOMAIN NAME > -m <MAIL DIRECTORY > -s <SMTP PORT > -p <MANAGEMENT PORT > [OPTION]...\n"
         "\n"
-        "   -h               Print this help message and exit.\n"
-        /*"   -l <SOCKS addr> Dirección donde servirá el proxy SOCKS.\n"*/
-        /*"   -L <conf  addr> Dirección donde servirá el servicio de management.\n"*/
-        "   -p <SMTPD PORT>  SMTP server port.\n"
-        "   -c <CONF PORT >  Configuration port.\n"
-        "   -d <MAIL DIR  >  Directory path where received mail will be saved.\n"
-        "   -v               Print version information and exit.\n"
+        "   -t   <COMMAND PATH >    What transformation command will be used.\n"
+        "   -f   <VRFY DIR >        Directory where already verified mails are stored and new one will be stored.\n"
         "\n",
         progname);
     exit(1);

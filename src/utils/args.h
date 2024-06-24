@@ -13,31 +13,69 @@
 #include <stdint.h>     // uint16_t
 #include <errno.h>      // errno
 #include <getopt.h>     // getopt_long
-#include "smtpd_info.h" // Product and team information
+#include <stdbool.h>    // bool 
 
 // TODO REFACTOR
 struct smtpd_args {
-    char *          mail_directory;
+    char *          mail_directory; //Where the server is going to store the mails
 
-    //char           *socks_addr;
-    unsigned short  socks_port;
+    unsigned short  smtp_port;
 
-    //char *          mng_addr;
     unsigned short  mng_port;
 
-    bool            disectors_enabled;
+    char *          domain; //Which domain the server is going to be managing "example.com"
 
-    //struct users    users[MAX_USERS];
+    char *          trsf_cmd;//Command for mail transformation
+
+    char *          vrfy_mails;//Where to find the verified mails 
+
+    bool            vryf_enabled;//Shall the server veryfy the mails
+
+    bool            trsf_enabled;//Shall the server transform the mails
 };
 
-// TODO REFACTOR
 /**
- * Interpreta la linea de comandos (argc, argv) llenando
- * args con defaults o la seleccion humana. Puede cortar
- * la ejecución.
+ * \brief    Parse arguments
+ * 
+ * \param[in]
  */
-void 
-parse_args(const int argc, char **argv, struct socks5args *args);
+bool parse_args(int argc, char ** argv, struct smtpd_args * const result);
+
+/****************************************************************************/
+#define PRODUCT_VERSION     "0.1.0"
+
+#define ORGANIZATION        "ITBA, Protocolos de Comunicacion"
+
+#define COMPILATION_DATE    __DATE__
+#define COMPILATION_TIME    __TIME__
+
+/****************************************************************************/
+
+#define TEAM_NO "3"
+
+#define TEAM_MEMBERS(XX)                                                    \
+    XX("Causse",        "Juan Ignacio",     "61105")                        \
+    XX("De Caro",       "Guido",            "61590")                        \
+    XX("Mindlin",       "Felipe",           "62774")                        \
+    XX("Sendot",        "Francisco",        "62351")                        
+
+const char * team_members_last_names[] ={
+    #define XX(LAST_NAME, FIRST_NAME, ID) LAST_NAME,
+    TEAM_MEMBERS(XX)
+    #undef XX
+};
+
+const char * team_members_first_names[] ={
+    #define XX(LAST_NAME, FIRST_NAME, ID) FIRST_NAME,
+    TEAM_MEMBERS(XX)
+    #undef XX
+};
+
+const char * team_members_ids[] ={
+    #define XX(LAST_NAME, FIRST_NAME, ID) ID,
+    TEAM_MEMBERS(XX)
+    #undef XX
+};
 
 #endif
 
