@@ -332,7 +332,7 @@ SelectorErrors Selector_remove(Selector const self,
         /* Remove the file descriptor data */
         void * data = NULL;
         HashMap_pop(self->fd_data,  fd, &data);
-        if (type != NULL && free_data){
+        if (type != NULL && free_data && self->data_free_fn != NULL){
             self->data_free_fn(data);
         }
     }
