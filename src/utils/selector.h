@@ -42,6 +42,8 @@
 
 /*************************************************************************/
 
+#define SELECTOR_NO_TIMEOUT -1
+
 /**
  * \typedef     Selector main Abstract Data Type.
 */
@@ -82,7 +84,7 @@ typedef enum {
 /**
  * \brief       Creates a new Selector with no timeout (*Selector_select* will block until
  *              any file descriptor becomes ready).
- * \details     Calling this function is equivalent to *Selector_create_timeout(-1, data_free_cb)*.
+ * \details     Calling this function is equivalent to *Selector_create_timeout(SELECTOR_NO_TIMEOUT, data_free_cb)*.
  * 
  * \param[in] data_free_cb  Callback used to free file descriptor data when a file descriptor is
  *                          removed from the Selector, or when performing a cleanup.

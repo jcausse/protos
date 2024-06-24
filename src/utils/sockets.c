@@ -90,7 +90,6 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
         THROW_ON_ERR(listen(ipv4_fd, backlog));
 
         /* Set IPv4 socket to non-blocking mode */
-        flags;
         THROW_ON_ERR(flags = fcntl(ipv4_fd, F_GETFL, 0));
         THROW_ON_ERR(fcntl(ipv4_fd, F_SETFL, flags | O_NONBLOCK));
 
@@ -115,7 +114,6 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
         THROW_ON_ERR(bind(ipv6_fd, (struct sockaddr *)&addr6, sizeof(addr6)));
 
         /* Set IPv6 socket to non-blocking mode */
-        flags;
         THROW_ON_ERR(flags = fcntl(ipv6_fd, F_GETFL, 0));
         THROW_ON_ERR(fcntl(ipv6_fd, F_SETFL, flags | O_NONBLOCK));
 

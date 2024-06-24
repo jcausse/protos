@@ -94,6 +94,10 @@ int main(void){
 /****************************************************************/
 
 static void smtpd_init(void){
+    /* Close unused file descriptors */
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+
     /* Set SIGINT handler */
     signal(SIGINT, sigint_handler);
 
@@ -121,6 +125,9 @@ static void smtpd_init(void){
             ) == NULL                   // Expected return: Logger (not NULL)
         );
         LOG_VERBOSE(MSG_INFO_LOGGER_CREATED);
+
+        /* Close stderr as it will not be used */
+        close(STDERR_FILENO);
 
         /* Create passive sockets (server sockets) for IPv4 and IPv6 */
         THROW_IF_NOT(
