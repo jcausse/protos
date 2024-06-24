@@ -1,5 +1,5 @@
-#ifndef TRANSFORM_CENTRAL_H
-#define TRANSFORM_CENTRAL_H
+#ifndef CENTRAL_H
+#define CENTRAL_H
 
 #include <dirent.h>
 #include <stdio.h>

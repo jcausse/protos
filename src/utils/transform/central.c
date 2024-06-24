@@ -1,4 +1,4 @@
-#include "transform_central.h"
+#include "central.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +17,7 @@ SlaveInfo create_slave(char* command){
     
     if (pipe(slave.toSlavePipe) == -1 || pipe(slave.fromSlavePipe) == -1) {
         perror("pipe");
-        exit(EXIT_FAILURE);
+        return FAILURE;
     }
     
     if ((slave.pid = fork()) == 0) {
@@ -32,10 +32,10 @@ SlaveInfo create_slave(char* command){
         execve(SLAVE_NAME,args, NULL);
 
         perror("execve");
-        exit(EXIT_FAILURE);
+        return FAILURE;
         } else if (slave.pid == -1) {
         perror("fork");
-        exit(EXIT_FAILURE);
+        return FAILURE;
         }else {
             // Código para el proceso padre
             close(slave.fromSlavePipe[1]);
@@ -116,13 +116,4 @@ void distribute_tasks( char* start_input,char* cmd){
         int status;
         waitpid(slaves[i].pid, &status, 0);
     }
-}
-
-int main(int argc, char* argv[]) {
-    if(argc < 3){
-        printf("Usage: %s <command> <initial_input>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-    distribute_tasks(argv[2],argv[1]);
-    return 0;
 }
