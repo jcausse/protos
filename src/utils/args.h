@@ -14,6 +14,7 @@
 /* Include header files                                                  */
 /*************************************************************************/
 
+#include <stdio.h>          // fprintf(), stderr
 #include <limits.h>         // LONG_MIN, LONG_MAX, SHRT_MIN, SHRT_MAX, INT_MIN, INT_MAX
 #include <string.h>         // memset
 #include <stdint.h>         // uint16_t
