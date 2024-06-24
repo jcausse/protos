@@ -15,6 +15,8 @@
 
 #define PORT_MAX 65535
 
+#define PRODUCT_VERSION     "0.1.0"
+
 #define ORGANIZATION        "ITBA, Protocolos de Comunicacion"
 
 #define COMPILATION_DATE    __DATE__
@@ -59,99 +61,66 @@ typedef enum {
 } ArgsErrors;
 
 /*************************************************************************/
-/* Private function declarations                                         */
-/*************************************************************************/
-
-/**
- * \brief                       Removes a substring from a string. Used to remove the TO_TRANSFORM substring from the user name.
- * 
- * \param[in] string            Given string to clean.
- * \param[in] sub               Substring to remove form the string.
- *
- * 
- * \return                      void
- */
-static void removeSubstr (char *string, char *sub);
-
-/**
- * \brief       Prit usage.
- * 
- * \param[in] progname      Program name (argv[0]).
- */
-static void usage(const char *progname);
-
-/**
- * \brief       Print product version, authors, compilation date and other messages.
- */
-static void version(void);
-
-/*************************************************************************/
-
-/**
- * \note    The following code is part of the Library "libCinputs", that can be found at
- *          https://github.com/jcausse/libcinputs
- */
-
-static short    parse_short     (const char* str, int radix);
-static int      parse_int       (const char* str, int radix);
-static long     parse_long      (const char* str, int radix);
-
-/*************************************************************************/
 /* Public functions                                                      */
 /*************************************************************************/
 
-parse_args(const int argc, char *argv, struct socks5argsargs) {
-    memset(args, 0, sizeof(*args));
+bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
 
-    args->socks_addr = "0.0.0.0";
-    args->socks_port = 1080;
-
-    args->mng_addr   = "127.0.0.1";
-    args->mng_port   = 8080;
-
-    args->disectors_enabled = true;
-
+    if(argc < 9){
+        usage(argv[0]);
+    }
+    memset(result, 0, sizeof(SMTPDArgs));
+    result->min_log_level = LOGGER_DEFAULT_MIN_LOG_LEVEL;
+    int arg = 1;
     int c;
-    int nusers = 0;
+    while(true){
 
-    while (true) {
-        int option_index = 0;
-        static struct option long_options[] = {
-            { 0,           0,                 0, 0 }
-        };
+    int option_index = 0;
+    static struct option long_options[] = { { 0,           0,                 0, 0 } };
 
-        c = getopt_long(argc, argv, "hl:L:Np:P:u:v", long_options, &option_index);
-        if (c == -1)
+        c = getopt_long(argc, argv, "hd:m:s:p:t:f:L:v", long_options, &option_index);
+        if (c == -1){
             break;
+        }
 
         switch (c) {
             case 'h':
                 usage(argv[0]);
                 break;
-            case 'l':
-                args->socks_addr = optarg;
+            case 'd':
+                result->domain = optarg;
                 break;
-            case 'L':
-                args->mng_addr = optarg;
+            case 'm':
+                result->mail_directory = optarg;
                 break;
-            case 'N':
-                args->disectors_enabled = false;
+            case 's':
+                result->smtp_port = parse_short(optarg, 10);
                 break;
             case 'p':
-                args->socks_port = port(optarg);
+                result->mngr_port = parse_short(optarg,10);
                 break;
-            case 'P':
-                args->mng_port   = port(optarg);
+            case 't':
+                result->trsf_cmd = optarg;
+                result->trsf_enabled = true;
                 break;
-            case 'u':
-                if(nusers >= MAX_USERS) {
-                    fprintf(stderr, "maximun number of command line users reached: %d.\n", MAX_USERS);
-                    exit(1);
-                } else {
-                    user(optarg, args->users + nusers);
-                    nusers++;
+            case 'f':
+                result->vrfy_mails   = optarg;
+                result->vryf_enabled = true;
+                break;
+            case 'L':
+                if(optarg == NULL){
+                    fprintf(stderr, "missing argument for option -L\n");
+                    return false;
+                }else if(optarg == 1){
+                    result->min_log_level = LOGGER_LEVEL_INFO;
+                }else if(optarg == 2){
+                    result->min_log_level = LOGGER_LEVEL_NORMAL;
+                }else if(optarg == 3){
+                    result->min_log_level = LOGGER_LEVEL_CRITICAL;
+                }else {
+                    fprintf(stderr, "invalid argument for option -L\n");
+                    return false;
                 }
-                break;
             case 'v':
                 version();
                 exit(0);
@@ -160,30 +129,24 @@ parse_args(const int argc, char *argv, struct socks5argsargs) {
                 fprintf(stderr, "unknown argument %d.\n", c);
                 exit(1);
         }
+        if (optind < argc) {
+                fprintf(stderr, "argument not accepted: ");
+                while (optind < argc) {
+                    fprintf(stderr, "%s ", argv[optind++]);
+                }
+                fprintf(stderr, "\n");
+                exit(1);
+            }
+    }       
 
-    }
-    if (optind < argc) {
-        fprintf(stderr, "argument not accepted: ");
-        while (optind < argc) {
-            fprintf(stderr, "%s ", argv[optind++]);
-        }
-        fprintf(stderr, "\n");
-        exit(1);
-    }
 }
+    
+
+
 
 /*************************************************************************/
-/* Private function definitions                                          */
+/* Private functions                                                     */
 /*************************************************************************/
-
-static void removeSubstr (char *string, char *sub) {
-    char *match;
-    int len = strlen(sub);
-    while ((match = strstr(string, sub))) {
-        *match = '\0';
-        strcat(string, match+len);
-    }
-}
 
 static void usage(const char *progname) {
     fprintf(stderr,
@@ -191,6 +154,8 @@ static void usage(const char *progname) {
         "\n"
         "   -t   <COMMAND PATH >    What transformation command will be used.\n"
         "   -f   <VRFY DIR >        Directory where already verified mails are stored and new one will be stored.\n"
+        "   -L   <LOG_LEVEL >       Min log level.\n"
+        "   -v                      Print version information and exit.\n"
         "\n",
         progname);
     exit(1);
@@ -207,13 +172,14 @@ static void version(void) {
             team_members_ids[i],
             team_members_last_names[i],
             team_members_first_names[i]
-        );
+        )
     }
 
     fprintf("Compiled on %s at %s\n", COMPILATION_DATE, COMPILATION_TIME);
 }
 
-/*************************************************************************/
+
+/***********************************************************************************************/
 
 /**
  * \note    The following code is part of the Library "libCinputs", that can be found at
@@ -264,4 +230,4 @@ static long parse_long(const char* str, int radix){
     return range_error || non_valid_error ? 0L : parsed;
 }
 
-/*************************************************************************/
+/***********************************************************************************************/
