@@ -24,6 +24,7 @@
 #include <errno.h>          // errno
 #include <getopt.h>         // getopt_long
 #include <stdbool.h>        // bool
+#include "logger.h"         // LogLevels
 
 /*************************************************************************/
 /* Typedefs                                                              */
@@ -48,7 +49,7 @@ typedef struct {
      * 
      * required:    false
      * default:     LOGGER_DEFAULT_MIN_LOG_LEVEL
-     * options:     LOGGER_LEVEL_DEBUG, LOGGER_LEVEL_INFO, LOGGER_LEVEL_NORMAL, LOGGER_LEVEL_CRITICAL
+     * options:     LOGGER_LEVEL_INFO, LOGGER_LEVEL_NORMAL, LOGGER_LEVEL_CRITICAL
      */
     LogLevels   min_log_level;
 } SMTPDArgs;
