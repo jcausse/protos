@@ -16,6 +16,7 @@
 #include "sock_types_handlers.h"
 #include "exceptions.h"
 #include "messages.h"
+#include "args.h"
 
 /****************************************************************/
 /* SMTPD configuration                                          */
@@ -49,8 +50,10 @@ extern SockWriteHandler write_handlers[];
 
 /**
  * \brief       Initializes SMTPD.
+ * 
+ * \param[in] args      Command-line  arguments
  */
-static void smtpd_init(void);
+static void smtpd_init(SMTPDArgs * args);
 
 /**
  * \brief       Starts SMTPD after initialization. This function only returns if an error occurs.
@@ -82,8 +85,17 @@ void sigint_handler(int sigint);
 /* Main function                                                */
 /****************************************************************/
 
-int main(void){
-    smtpd_init();                       // Initialize SMTPD.
+int main(int argc, char ** argv){
+    /* Parse command-line arguments */
+    SMTPDArgs args;
+    if (! parse_args(argc, argv, &args)){
+        return EXIT_FAILURE;
+    }
+
+    // \todo: pasar los argumentos a donde corresponda
+
+    /* Initialize and start server */
+    smtpd_init(&args);                  // Initialize SMTPD.
     smtpd_start();                      // Start SMTPD. Only returns on error.
     smtpd_abort();                      // Cleanup on error.
     return EXIT_FAILURE;                // Never reached.
@@ -93,7 +105,8 @@ int main(void){
 /* Private function definitions                                 */
 /****************************************************************/
 
-static void smtpd_init(void){
+static void smtpd_init(SMTPDArgs * const args){
+    (void) args; // \todo usar esta variable
     /* Close unused file descriptors */
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
