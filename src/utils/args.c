@@ -15,7 +15,6 @@
 
 #define PORT_MAX 65535
 
-#define PRODUCT_NAME        "smtpd"
 #define PRODUCT_VERSION     "0.1.0"
 
 #define ORGANIZATION        "ITBA, Protocolos de Comunicacion"
@@ -66,12 +65,49 @@ typedef enum {
 /*************************************************************************/
 
 bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
-    memset(result, 0, sizeof(SMTPDArgs));
-    
-    // \todo hardcoded
-    result->mngr_port = 9090;
-    result->smtp_port = 2525;
-    
+    if(argc < 9){
+        usage(argv[0]);
+    }
+
+    int arg = 1;
+
+    char* cmd;
+    char c; 
+    while(arg < argc){
+        cmd = argv[arg];
+        c = removeSubstr(cmd, "-");
+        switch (c)
+        {
+        case 'd':
+            result->domain = argv[arg + 1];
+            arg += 2;
+            break;
+        case 'm':
+            result->mail_directory = argv[arg + 1];
+            arg += 2;
+            break;
+        case 's':
+            uint16_t p = parse_short(argv[arg + 1],10);
+            result->smtp_port = p;
+            arg += 2;
+            break;
+        case 'p':
+            uint16_t p = parse_short(argv[arg + 1],10);
+            result->mngr_port = p;
+            arg += 2;
+            break;
+        case 't':
+            result->trsf_cmd = argv[arg + 1];
+            arg += 2;
+            break;
+        case 'f':
+            result->vrfy_mails = argv[arg + 1];
+            arg += 2;
+            break;
+        default:
+            break;
+        }
+    }
     return true;
 }
 
@@ -107,24 +143,6 @@ static void version(void) {
     }
 
     fprintf("Compiled on %s at %s\n", COMPILATION_DATE, COMPILATION_TIME);
-}
-
-static unsigned short port(const char *s) {
-    char * end = NULL;
-    const long sl = strtol(s, &end, 10);
-
-    if (
-            end == s 
-        ||  * end != '\0'
-        ||  ((LONG_MIN == sl || LONG_MAX == sl) && ERANGE == errno)
-        ||  sl < 0 
-        ||  sl > PORT_MAX
-    ) {
-        fprintf(stderr, "Invalid port: not in range [1-65535]: %s\n", s);
-        exit(1);
-    }
-
-    return (unsigned short) sl;
 }
 
 
