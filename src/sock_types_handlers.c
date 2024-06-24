@@ -68,7 +68,7 @@ HandlerErrors handle_server4 (int fd, void * _){
         /* If there was a connection to be accepted */
         if (sock != -1){
             /* Add the accepted connection's fd to the Selector */
-            Selector_add(selector, sock, SELECTOR_READ, SOCK_TYPE_CLIENT, NULL); // \todo data???
+            Selector_add(selector, sock, SELECTOR_WRITE, SOCK_TYPE_CLIENT, NULL); // \todo data???
             LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sock, SOCK_TYPE_CLIENT);
 
             /* Create log */
@@ -106,7 +106,7 @@ HandlerErrors handle_server6 (int fd, void * _){
         /* If there was a connection to be accepted */
         if (sock != -1){
             /* Add the accepted connection's fd to the Selector */
-            Selector_add(selector, sock, SELECTOR_READ, SOCK_TYPE_CLIENT, NULL);
+            Selector_add(selector, sock, SELECTOR_WRITE, SOCK_TYPE_CLIENT, NULL);
             LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sock, SOCK_TYPE_CLIENT);
 
             /* Create log */

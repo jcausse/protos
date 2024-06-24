@@ -197,7 +197,7 @@ static void smtpd_init(void){
     }
 }
 
-static void smtpd_start(){
+static void smtpd_start(void){
     while (true){
         /* Perform a select (2) operation */
         LOG_DEBUG(MSG_DEBUG_SELECTOR_SELECT);
@@ -240,7 +240,7 @@ static void smtpd_cleanup(int exit_code){
     exit(exit_code);
 }
 
-static void smtpd_abort(){
+static void smtpd_abort(void){
     LOG_ERR(MSG_EXIT_FAILURE);
     smtpd_cleanup(EXIT_FAILURE);
 }
