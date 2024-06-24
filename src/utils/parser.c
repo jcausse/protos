@@ -17,6 +17,7 @@
 #define CMD_NOT_IMPLEMENTED_MSG "502  Command not implemented\r\n"
 #define VRFY_NOT_FOUND "553-Requested action not taken: mailbox name not allowed"
 #define VRFY_AMBIGUOUS_MSG "553-Ambiguous; Possibilities are:\n%s\r\n"
+#define VRFY_AMBIGUOUS_INIT_LINE "553-<"
 #define VRFY_OK_MSG "250-<%s>\r\n"
 #define NEED_MAIL_FROM "503-5.5.1 Bad Sequence of Commands. Need MAIL FROM\r\n"
 #define NEED_RCPT_TO "503-5.5.1 Bad Sequence of Commands. Need RCPT\r\n"
@@ -369,24 +370,47 @@ static int vrfyTransition(Parser * parser, char * command) {
     }
     if(parser->structure != NULL) freeStruct(parser);
 
-    char * result = NULL;
-    int res = vrfy(&result,  command);
-    if(res == NONE) {
+    char **result = NULL;
+    int count;
+
+    int res = vrfy(command, VALID_FILE, &result, &count);
+    if(res == ERR) {
         parser->status = strdup(VRFY_NOT_FOUND);
         parser->machine->currentState = parser->machine->priorState;
         parser->structure = malloc(sizeof(CommandStructure));
         parser->structure->cmd = VRFY;
         return ERR;
     }
-    else if(res == SINGLE) {
-        parser->status = result;
+    char buff[1024];
+    if(count == 1) {
+        for(int i = 0; result[0][i] != '\0'; i++) {
+            if(result[0][i] == '\n') result[0][i] = '\0';
+        }
+        sprintf(buff, VRFY_OK_MSG, result[0]);
+        freeValidMails(result, count);
+        parser->status = strdup(buff);
         parser->machine->currentState = parser->machine->priorState;
         parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
         parser->structure->cmd = VRFY;
         return SUCCESS;
     }
 
-    parser->status = result;
+    int j = 0;
+    for(int i = 0; i < count ; i++) {
+        strcpy(buff + j, VRFY_AMBIGUOUS_INIT_LINE);
+        j += strlen(VRFY_AMBIGUOUS_INIT_LINE);
+        for(int k = 0; j<1024 && result[i][k] != '\n' ; j++, k++) {
+            buff[j] = result[i][k];
+        }
+        buff[j++] = '>';
+        buff[j++] = '\n';
+    }
+
+    buff[j] = '\0';
+    char ret[1500] = {0};
+    sprintf(ret, VRFY_AMBIGUOUS_MSG, buff);
+    freeValidMails(result, count);
+    parser->status = strdup(ret);
     parser->machine->currentState = parser->machine->priorState;
     parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
     parser->structure->cmd = VRFY;

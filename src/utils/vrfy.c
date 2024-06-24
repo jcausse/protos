@@ -1,68 +1,63 @@
+#include "parser.h"
 #include "vrfy.h"
 
-int load_valid_mails(const char file_path, char ***valid_mails, int *mails) {
-    FILE *file = fopen(file_path, "r");
+void freeValidMails(char **validMails, int mails){
+    for (int i = 0; i < mails; i++){
+        free(validMails[i]);
+    }
+    free(validMails);
+}
+
+int vrfy(const char *query, const char *filePath, char *** validMails, int *mailCount){
+    FILE *file = fopen(filePath, "r");
     if (file == NULL){
-        perror("Failed to open file");
-        return 0;
+        // Use logger to print error
+        return ERR;
     }
 
-    *mails = 0;
-    *valid_mails = NULL;
-    char line[MAX_LINE_LENGTH];
-    while (fgets(line,sizeof(line),file)){
-        char *newline = strchr(line, '\n');
-        if (newline) *newline = '\0';
+    *mailCount = 0;
+    *validMails = (char **) malloc(sizeof(char *));
+
+    unsigned long queryLen = strlen(query);
+
+    char *line = NULL;
+    size_t *mailLen;
+    while (getline(&line, mailLen, file) != ERR){
+        // If the mail is shorter than the query is not necessary to compare them
+        if(*mailLen < queryLen || (strncmp(query, line, queryLen) != SUCCESS)) {
+            free(mailLen);
+            free(line);
+            continue;
+        };
 
         // Allocate memory for a new email
-        *valid_mails = realloc(*valid_mails, (*mails + 1) * sizeof(char *));
-        if (!*valid_mails){
-            perror("Failed to allocate memory");
+        *validMails = realloc(*validMails, (*mailCount + 1) * sizeof(char *));
+        if (!*validMails){
+            // Use logger to log error
+            freeValidMails(*validMails, *mailCount);
+            free(line);
+            free(mailLen);
             fclose(file);
-            return 0;
+            return ERR;
         }
 
         // Copy the email into the allocated memory
-        (*valid_mails)[*mails] = strdup(line);
-        if (!(*valid_mails)[*mails]){
-            perror("Failed to duplicate string");
+        (*validMails)[*mailCount] = strdup(line);
+        if (!(*validMails)[*mailCount]){
+            // Use logger to log error
+            freeValidMails(*validMails, *mailCount);
+            free(line);
+            free(mailLen);
             fclose(file);
-            return 0;
+            return ERR;
         }
-
-        (*mails)++;
+        free(line);
+        free(mailLen);
+        (*mailCount)++;
     }
-    
 
+    free(line);
+    free(mailLen);
     fclose(file);
-    return 1;
-}
-
-int check_mail(const char *mail, char **valid_mails, int mails){
-    for (int i = 0; i < mails; i++){
-        if (strcmp(mail, valid_mails[i]) == 0){
-            return SUCCESS;
-        }
-    }
-
-    return FAILURE;
-}
-
-void free_valid_mails(char **valid_mails, int mails){
-    for (int i = 0; i < mails; i++){
-        free(valid_mails[i]);
-    }
-    free(valid_mails);
-}
-
-int vrfy(const char *mail,const char *file_path){
-    char **valid_mails = NULL;
-    int mail_count = 0;
-
-    if(!load_valid_mails(&valid_mails,&mail_count,file_path)){
-        fprintf(stderr,"Failed to load valid emails\n");
-        exit(EXIT_FAILURE);
-    }
-
-    return vrfy_mail(vrfy_mail(mail,&valid_mails,mail_count));
+    return SUCCESS;
 }
