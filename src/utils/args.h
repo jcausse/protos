@@ -1,81 +1,58 @@
 /**
  * \file        args.h
  * \brief       Parse command-line arguments.
+ * 
+ * \author      Causse, Juan Ignacio
+ * \author      Codagnone, Juan Francisco
+ * \author      De Caro, Guido
  */
 
-#ifndef ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM8
-#define ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM8
+#ifndef ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM81
+#define ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM81
 
-#include <stdio.h>      // printf
-#include <stdlib.h>     // exit
-#include <limits.h>     // LONG_MIN, LONG_MAX
+/*************************************************************************/
+/* Include header files                                                  */
+/*************************************************************************/
+
+#include <limits.h>     // LONG_MIN, LONG_MAX, SHRT_MIN, SHRT_MAX, INT_MIN, INT_MAX
 #include <string.h>     // memset
 #include <stdint.h>     // uint16_t
 #include <errno.h>      // errno
 #include <getopt.h>     // getopt_long
-#include <stdbool.h>    // bool 
+#include <stdbool.h>    // bool
 
-// TODO REFACTOR
-struct smtpd_args {
-    char *          mail_directory; //Where the server is going to store the mails
-
-    unsigned short  smtp_port;
-
-    unsigned short  mng_port;
-
-    char *          domain; //Which domain the server is going to be managing "example.com"
-
-    char *          trsf_cmd;//Command for mail transformation
-
-    char *          vrfy_mails;//Where to find the verified mails 
-
-    bool            vryf_enabled;//Shall the server veryfy the mails
-
-    bool            trsf_enabled;//Shall the server transform the mails
-};
+/*************************************************************************/
+/* Typedefs                                                              */
+/*************************************************************************/
 
 /**
- * \brief    Parse arguments
- * 
- * \param[in]
+ * \typedef         SMTPDArgs: structure that contains all parsed arguments,
+ *                  or its default values when not provided.
  */
-bool parse_args(int argc, char ** argv, struct smtpd_args * const result);
+typedef struct {
+    char *          mail_directory; // Path to the directory where the server is going to store the mails.
+    unsigned short  smtp_port;      // Port where the SMTP server will be listening to.
+    unsigned short  mng_port;       // Port where the management server will be listening to.
+    char *          domain;         // Domain the server is going to be managing ("example.com").
+    char *          trsf_cmd;       // Command for mail transformation.
+    char *          vrfy_mails;     // Where to find the verified mails.
+    bool            vryf_enabled;   // Enables or disables verification.
+    bool            trsf_enabled;   // Enables or disables transformation.
+} SMTPDArgs;
 
-/****************************************************************************/
-#define PRODUCT_VERSION     "0.1.0"
+/*************************************************************************/
+/* Public function prototypes                                            */
+/*************************************************************************/
 
-#define ORGANIZATION        "ITBA, Protocolos de Comunicacion"
+/**
+ * \brief    Parse arguments from command-line.
+ * 
+ * \param[in]  argc         Argument count (includes executable name).
+ * \param[in]  argv         Argument string array (includes executable name).
+ * \param[out] result       Pointer to structure smtpd_args used to save parsed arguments and values.
+ * 
+ * \return  Returns true on success, false otherwise.
+ */
+bool parse_args(int argc, char ** argv, SMTPDArgs * const result);
 
-#define COMPILATION_DATE    __DATE__
-#define COMPILATION_TIME    __TIME__
-
-/****************************************************************************/
-
-#define TEAM_NO "3"
-
-#define TEAM_MEMBERS(XX)                                                    \
-    XX("Causse",        "Juan Ignacio",     "61105")                        \
-    XX("De Caro",       "Guido",            "61590")                        \
-    XX("Mindlin",       "Felipe",           "62774")                        \
-    XX("Sendot",        "Francisco",        "62351")                        
-
-const char * team_members_last_names[] ={
-    #define XX(LAST_NAME, FIRST_NAME, ID) LAST_NAME,
-    TEAM_MEMBERS(XX)
-    #undef XX
-};
-
-const char * team_members_first_names[] ={
-    #define XX(LAST_NAME, FIRST_NAME, ID) FIRST_NAME,
-    TEAM_MEMBERS(XX)
-    #undef XX
-};
-
-const char * team_members_ids[] ={
-    #define XX(LAST_NAME, FIRST_NAME, ID) ID,
-    TEAM_MEMBERS(XX)
-    #undef XX
-};
-
-#endif
-
+#endif // ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM81

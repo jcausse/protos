@@ -1,141 +1,75 @@
 /**
  * \file        args.c
  * \brief       Parse command-line arguments.
+ * 
+ * \author      Causse, Juan Ignacio
+ * \author      Codagnone, Juan Francisco
+ * \author      De Caro, Guido
  */
 
 #include "args.h"
 
+/*************************************************************************/
+/* Constant, macro, and module-global variable definitions               */
+/*************************************************************************/
+
 #define PORT_MAX 65535
+
+#define PRODUCT_VERSION     "0.1.0"
+
+#define ORGANIZATION        "ITBA, Protocolos de Comunicacion"
+
+#define COMPILATION_DATE    __DATE__
+#define COMPILATION_TIME    __TIME__
+
+#define TEAM_NO "3"
+
+#define TEAM_MEMBERS(XX)                                                    \
+    XX("Causse",        "Juan Ignacio",     "61105")                        \
+    XX("De Caro",       "Guido",            "61590")                        \
+    XX("Mindlin",       "Felipe",           "62774")                        \
+    XX("Sendot",        "Francisco",        "62351")                        
+
+static const char * team_members_last_names[] ={
+    #define XX(LAST_NAME, FIRST_NAME, ID) LAST_NAME,
+    TEAM_MEMBERS(XX)
+    #undef XX
+};
+
+static const char * team_members_first_names[] ={
+    #define XX(LAST_NAME, FIRST_NAME, ID) FIRST_NAME,
+    TEAM_MEMBERS(XX)
+    #undef XX
+};
+
+static const char * team_members_ids[] ={
+    #define XX(LAST_NAME, FIRST_NAME, ID) ID,
+    TEAM_MEMBERS(XX)
+    #undef XX
+};
+
+// TODO ESTO SIRVE?????
+/**
+ * \typedef     Return values
+ */
+typedef enum {
+    ARGS_OK                 = 0,    // No error
+    ARGS_MISSING            = 1,    // Missing required parameter
+    ARGS_TYPE_MISMATCH      = 2,    // Type mismatch for parameter that requires a type
+    ARGS_TOO_MANY           = 3,    // Too many arguments for parameter
+    ARGS_TOO_FEW            = 4,    // Too few arguments for parameter
+} ArgsErrors;
 
 /*************************************************************************/
 /* Public functions                                                      */
 /*************************************************************************/
 
-static char removeSubstr (char *string, char *sub) {
-    char *match;
-    int len = strlen(sub);
-    while ((match = strstr(string, sub))) {
-        *match = '\0';
-        strcat(string, match+len);
-    }
-    return *string;
+bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
+    //TODO
+    return true;
 }
 
-// TODO REFACTOR
-bool parse_args(int argc, char ** argv, struct smtpd_args * const result){
-/*
-    args->socks_addr = "0.0.0.0";
-    args->socks_port = 1080;
 
-    args->mng_addr   = "127.0.0.1";
-    args->mng_port   = 8080;
-
-    args->disectors_enabled = true;
-
-    int c;
-    int nusers = 0;
-
-    while (true) {
-        int option_index = 0;
-        static struct option long_options[] = {
-            { 0,           0,                 0, 0 }
-        };
-
-        c = getopt_long(argc, argv, "hl:L:Np:P:u:v", long_options, &option_index);
-        if (c == -1)
-            break;
-
-        switch (c) {
-            case 'h':
-                usage(argv[0]);
-                break;
-            case 'l':
-                args->socks_addr = optarg;
-                break;
-            case 'L':
-                args->mng_addr = optarg;
-                break;
-            case 'N':
-                args->disectors_enabled = false;
-                break;
-            case 'p':
-                args->socks_port = port(optarg);
-                break;
-            case 'P':
-                args->mng_port   = port(optarg);
-                break;
-            case 'u':
-                if(nusers >= MAX_USERS) {
-                    fprintf(stderr, "maximun number of command line users reached: %d.\n", MAX_USERS);
-                    exit(1);
-                } else {
-                    user(optarg, args->users + nusers);
-                    nusers++;
-                }
-                break;
-            case 'v':
-                version();
-                exit(0);
-                break;
-            default:
-                fprintf(stderr, "unknown argument %d.\n", c);
-                exit(1);
-        }
-
-    }
-    if (optind < argc) {
-        fprintf(stderr, "argument not accepted: ");
-        while (optind < argc) {
-            fprintf(stderr, "%s ", argv[optind++]);
-        }
-        fprintf(stderr, "\n");
-        exit(1);
-    }
-    */
-    if(argc < 9){
-        usage(argv[0]);
-    }
-
-    int arg = 1;
-
-    char* cmd;
-    char c; 
-    while(arg < argc){
-        cmd = argv[arg];
-        c = removeSubstr(cmd, "-");
-        switch (c)
-        {
-        case 'd':
-            *result->domain = argv[arg + 1];
-            arg += 2;
-            break;
-        case 'm':
-            *result->mail_directory = argv[arg + 1];
-            arg += 2;
-            break;
-        case 's':
-            unsigned short port = port_check(argv[arg + 1]);
-            *result->smtp_port = port;
-            arg += 2;
-            break;
-        case 'p':
-            unsigned short port = port_check(argv[arg + 1]);
-            *result->mng_port = port;
-            arg += 2;
-            break;
-        case 't':
-            *result->trsf_cmd = argv[arg + 1];
-            arg += 2;
-            break;
-        case 'f':
-            *result->vrfy_mails = argv[arg + 1];
-            arg += 2;
-            break;
-        default:
-            break;
-        }
-    }
-}
 
 /*************************************************************************/
 /* Private functions                                                     */
@@ -187,3 +121,56 @@ static unsigned short port(const char *s) {
     return (unsigned short) sl;
 }
 
+
+/***********************************************************************************************/
+
+/**
+ * \note    The following code is part of the Library "libCinputs", that can be found at
+ *          https://github.com/jcausse/libcinputs
+ */
+
+#define STRTOL_MIN_RADIX 2
+#define STRTOL_MAX_RADIX 36
+
+static short parse_short(const char* str, int radix){
+    long res = parse_long(str, radix);
+    if (res > SHRT_MAX || res < SHRT_MIN){
+        errno = ERANGE;
+        return (short) 0;
+    }
+    return (short) res;
+}
+
+static int parse_int(const char* str, int radix){
+    long res = parse_long(str, radix);
+    if (res > INT_MAX || res < INT_MIN){
+        errno = ERANGE;
+        return (int) 0;
+    }
+    return (int) res;
+}
+
+static long parse_long(const char* str, int radix){
+    if (str == NULL || (radix != 0 && (radix < STRTOL_MIN_RADIX || radix > STRTOL_MAX_RADIX))){
+        errno = EINVAL;
+        return 0L;
+    }
+
+    errno = 0;
+    char* end;
+    bool range_error = false, non_valid_error = false;
+
+    long parsed = strtol(str, &end, radix);
+
+    if (end == str){
+        non_valid_error = true;
+        errno = EINVAL;
+    }
+    else{
+        range_error = errno == ERANGE;
+    }
+
+    return range_error || non_valid_error ? 0L : parsed;
+}
+
+/***********************************************************************************************/
