@@ -41,7 +41,8 @@
 /********************************************************/
 
 #define MSG_INFO_LOGGER_CREATED     "Logger started."
-#define MSG_INFO_SV_SOCKET_CREATED  "Listening on port %d."
+#define MSG_INFO_SV_SOCKET_CREATED  "Listening for SMTP connections on TCP port %d."
+#define MSG_INFO_MNG_SOCKET_CREATED "Listening for management connections on UDP port %d."
 #define MSG_INFO_SELECTOR_CREATED   "Selector started."
 
 /********************************************************/

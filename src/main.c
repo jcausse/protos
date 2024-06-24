@@ -20,7 +20,6 @@
 
 #define CONFIG_BACKLOG_SIZE     10
 #define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log"
-#define CONFIG_LOG_LEVEL        LOGGER_LEVEL_DEBUG
 
 /****************************************************************/
 /* Global variables                                             */
@@ -43,7 +42,7 @@ extern SockWriteHandler write_handlers[];
 /**
  * \brief       Initializes SMTPD.
  * 
- * \param[in] args      Command-line  arguments
+ * \param[in] args      Command-line arguments
  */
 static void smtpd_init(SMTPDArgs * args);
 
@@ -84,8 +83,6 @@ int main(int argc, char ** argv){
         return EXIT_FAILURE;
     }
 
-    // \todo: pasar los argumentos a donde corresponda
-
     /* Initialize and start server */
     smtpd_init(&args);                  // Initialize SMTPD.
     smtpd_start();                      // Start SMTPD. Only returns on error.
@@ -98,28 +95,24 @@ int main(int argc, char ** argv){
 /****************************************************************/
 
 static void smtpd_init(SMTPDArgs * const args){
-    (void) args; // \todo usar esta variable
-    /* Close unused file descriptors */
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-
-    /* Set SIGINT handler */
-    signal(SIGINT, sigint_handler);
-
     /* Variables */
     int         sv_fd_4     = -1;       // IPv4 server socket
     int         sv_fd_6     = -1;       // IPv6 server socket
+    int         mngr_fd     = -1;       // UDP management port
 
     /* Logger configuration */
     LoggerConfig logger_cfg = {
-        .min_log_level      = CONFIG_LOG_LEVEL, // Minimum log level
-        .with_datetime      = true,     // Include date and time in logs
-        .with_level         = true,     // Include log levels
-        .flush_immediately  = true,     // Disable buffering for real-time log viewing (tail -f)
-        .log_prefix         = NULL      // "smtpd v1.0.0" \todo
+        .min_log_level      = args->min_log_level,  // Minimum log level
+        .with_datetime      = true,                 // Include date and time in logs
+        .with_level         = true,                 // Include log levels
+        .flush_immediately  = true,                 // Disable buffering for real-time log viewing (tail -f)
+        .log_prefix         = PRODUCT_NAME " v" PRODUCT_VERSION     // Product info as log prefix
     };
 
     TRY{
+        /* Set SIGINT handler */
+        signal(SIGINT, sigint_handler);
+
         /* Create Logger */
         THROW_IF(
             (logger =
@@ -131,25 +124,36 @@ static void smtpd_init(SMTPDArgs * const args){
         );
         LOG_VERBOSE(MSG_INFO_LOGGER_CREATED);
 
-        /* Close stderr as it will not be used */
+        /* Close unused file descriptors */
+        close(STDIN_FILENO);
+        close(STDOUT_FILENO);
         close(STDERR_FILENO);
 
         /* Create passive sockets (server sockets) for IPv4 and IPv6 */
         THROW_IF_NOT(
             tcp_serve(
-                CONFIG_PORT,            // Port for SMTPD
+                args->smtp_port,        // Port for SMTPD
                 CONFIG_BACKLOG_SIZE,    // Max quantity of pending (unaccepted) connections
                 &sv_fd_4,               // IPv4 socket (output parameter)
                 &sv_fd_6                // IPv6 socket (output parameter)
             )
         );                              // Expected return: true
-        LOG_VERBOSE(MSG_INFO_SV_SOCKET_CREATED, CONFIG_PORT);
+        LOG_VERBOSE(MSG_INFO_SV_SOCKET_CREATED, args->smtp_port);
+
+        /* Create management socket for both IPv4 and IPv6 */
+        THROW_IF_NOT(
+            udp_serve(
+                args->mngr_port,        // Management port
+                mngr_fd                 // Management socket (output parameter)
+            )
+        );                              // Expected return: true
+        LOG_VERBOSE(MSG_INFO_MNG_SOCKET_CREATED, args->mngr_port);
 
         /* Create Selector */
         THROW_IF((selector = Selector_create(free)) == NULL) // \todo data free fn
         LOG_VERBOSE(MSG_INFO_SELECTOR_CREATED);
 
-        /* Add both of the server sockets to the Selector */
+        /* Add both of the server sockets and the manager socket to the Selector */
         THROW_IF_NOT(
             Selector_add(
                 selector,               // The Selector itself
@@ -172,6 +176,17 @@ static void smtpd_init(SMTPDArgs * const args){
             == SELECTOR_OK              // Expected return: SELECTOR_OK
         );
         LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sv_fd_6, SOCK_TYPE_SERVER6);
+        THROW_IF_NOT(
+            Selector_add(
+                selector,               // The Selector itself
+                mngr_fd,                // File descriptor to add
+                SELECTOR_READ,          // Mode
+                SOCK_TYPE_MANAGER,      // File descriptor type
+                NULL                    // No data needed
+            )
+            == SELECTOR_OK
+        );
+        LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, mngr_fd, SOCK_TYPE_MANAGER);
     }
     CATCH{
         /* Could not create the logger */
@@ -198,6 +213,7 @@ static void smtpd_init(SMTPDArgs * const args){
         /* Cleanup and exit */
         safe_close(sv_fd_4);
         safe_close(sv_fd_6);
+        safe_close(mngr_fd);
         smtpd_abort();
     }
 }
