@@ -14,12 +14,12 @@
 /* Include header files                                                  */
 /*************************************************************************/
 
-#include <limits.h>     // LONG_MIN, LONG_MAX, SHRT_MIN, SHRT_MAX, INT_MIN, INT_MAX
-#include <string.h>     // memset
-#include <stdint.h>     // uint16_t
-#include <errno.h>      // errno
-#include <getopt.h>     // getopt_long
-#include <stdbool.h>    // bool
+#include <limits.h>         // LONG_MIN, LONG_MAX, SHRT_MIN, SHRT_MAX, INT_MIN, INT_MAX
+#include <string.h>         // memset
+#include <stdint.h>         // uint16_t
+#include <errno.h>          // errno
+#include <getopt.h>         // getopt_long
+#include <stdbool.h>        // bool
 
 /*************************************************************************/
 /* Typedefs                                                              */
@@ -30,14 +30,14 @@
  *                  or its default values when not provided.
  */
 typedef struct {
-    char *          mail_directory; // Path to the directory where the server is going to store the mails.
-    unsigned short  smtp_port;      // Port where the SMTP server will be listening to.
-    unsigned short  mng_port;       // Port where the management server will be listening to.
-    char *          domain;         // Domain the server is going to be managing ("example.com").
-    char *          trsf_cmd;       // Command for mail transformation.
-    char *          vrfy_mails;     // Where to find the verified mails.
-    bool            vryf_enabled;   // Enables or disables verification.
-    bool            trsf_enabled;   // Enables or disables transformation.
+    char *   domain;         // Domain the server is going to be managing ("example.com").
+    uint16_t smtp_port;      // Port where the SMTP server will be listening to.
+    uint16_t mngr_port;      // Port where the management server will be listening to.
+    char *   mail_directory; // Path to the directory where the server is going to store the mails.
+    char *   trsf_cmd;       // Command for mail transformation.
+    char *   vrfy_mails;     // Where to find the verified mails.
+    bool     vryf_enabled;   // Enables or disables verification.
+    bool     trsf_enabled;   // Enables or disables transformation.
 } SMTPDArgs;
 
 /*************************************************************************/
