@@ -15,9 +15,6 @@
 
 #define PORT_MAX 65535
 
-#define PRODUCT_NAME        "smtpd"
-#define PRODUCT_VERSION     "0.1.0"
-
 #define ORGANIZATION        "ITBA, Protocolos de Comunicacion"
 
 #define COMPILATION_DATE    __DATE__

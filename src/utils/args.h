@@ -10,6 +10,9 @@
 #ifndef ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM81
 #define ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM81
 
+#define PRODUCT_NAME        "smtpd"
+#define PRODUCT_VERSION     "0.1.0"
+
 /*************************************************************************/
 /* Include header files                                                  */
 /*************************************************************************/
