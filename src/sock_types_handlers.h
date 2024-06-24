@@ -12,18 +12,62 @@
 #include <stddef.h>     // NULL
 #include <unistd.h>     // close(), write()
 #include <sys/socket.h> // accept(), recv()
+#include <arpa/inet.h>  // sockaddr_in, sockaddr_in6
 #include <sys/types.h>
+#include <errno.h>      // errno, EWOULDBLOCK, EAGAIN, EINTR
 #include "logger.h"
 #include "selector.h"
+#include "messages.h"
+
+/***********************************************************************************************/
+/* Custom data type definitions                                                                */
+/***********************************************************************************************/
 
 /**
  * \enum        HandlerErrors: errors returned by socket READ / WRITE handlers.
- * 
- * \todo Agregar definiciones de errores.
  */
 typedef enum{
     HANDLER_OK      = 0,        // No error occurred
 } HandlerErrors;
+
+/**
+ * \typedef     SockReadHandler: Typedef of function that handles reads from a socket.
+ * 
+ *              Parameters are:
+ *              1. The socket file descriptor (of type int).
+ *              2. The data associated to that file descriptor (of type void *).
+ * 
+ *              These functions return `HandlerErrors`.
+ */
+typedef HandlerErrors (* SockReadHandler) (int, void *);
+
+/**
+ * \typedef     SockWriteHandler: Typedef of function that handles writes to a socket.
+ * 
+ *              Parameters are:
+ *              1. The socket file descriptor (of type int).
+ *              2. The data associated to that file descriptor (of type void *).
+ * 
+ *              These functions return `HandlerErrors`.
+ */
+typedef HandlerErrors (* SockWriteHandler) (int, void *);
+
+/*  XX(SOCKET_TYPE,             READ_HANDLER,                   WRITE_HANDLER               ) */
+#define SOCK_TYPES_AND_HANDLERS(XX)                                                           \
+    XX(SOCK_TYPE_SERVER4,       handle_server4,                 NULL                        ) \
+    XX(SOCK_TYPE_SERVER6,       handle_server6,                 NULL                        ) \
+    XX(SOCK_TYPE_CLIENT,        handle_client_read,             handle_client_write         ) \
+    XX(SOCK_TYPE_MANAGER,       handle_manager_read,            handle_manager_write        )
+
+/**
+ * \enum        SockTypes: socket types used in the Selector.
+ */
+typedef enum {
+    #define XX(sock_type_numeric, sock_read_handler, sock_write_handler) sock_type_numeric,
+    SOCK_TYPES_AND_HANDLERS(XX)
+    #undef XX
+    SOCK_TYPE_QTY
+} SockTypes;
 
 /***********************************************************************************************/
 /* Read handler declarations                                                                   */
@@ -36,7 +80,7 @@ typedef enum{
  * \details     Accepts those new connections and adds them to the Selector to perform a WRITE
  *              operation (as it is part of SMTP's RFC).
  *              This function attempts to accept all pending connections until `accept (2)` returns
- *              EWOULDBLOCK. For this reason, it is crucial that the server socket is set as non
+ *              EWOULDBLOCK or EAGAIN. For this reason, it is crucial that the server socket is set as non
  *              blocking using `fcntl (2)` and option `O_NONBLOCK`.
  * 
  * \param[in] fd        The server socket file descriptor to which perform an accept (2).
@@ -54,7 +98,7 @@ HandlerErrors handle_server4            (int fd, void * _);
  * \details     Accepts those new connections and adds them to the Selector to perform a WRITE
  *              operation (as it is part of SMTP's RFC).
  *              This function attempts to accept all pending connections until `accept (2)` returns
- *              EWOULDBLOCK. For this reason, it is crucial that the server socket is set as non
+ *              EWOULDBLOCK or EAGAIN. For this reason, it is crucial that the server socket is set as non
  *              blocking using `fcntl (2)` and option `O_NONBLOCK`.
  * 
  * \param[in] fd        The server socket file descriptor to which perform an accept (2).
@@ -112,57 +156,5 @@ HandlerErrors handle_client_write       (int fd, void * data);
  *              - HANDLER_OK
  */
 HandlerErrors handle_manager_write      (int fd, void * data);
-
-/***********************************************************************************************/
-/* Custom data type definitions                                                                */
-/***********************************************************************************************/
-
-/**
- * \typedef     SockReadHandler: Typedef of function that handles reads from a socket.
- * 
- *              Parameters are:
- *              1. The socket file descriptor (of type int).
- *              2. The data associated to that file descriptor (of type void *).
- * 
- *              These functions return `HandlerErrors`.
- */
-typedef HandlerErrors (* SockReadHandler) (int, void *);
-
-/**
- * \typedef     SockWriteHandler: Typedef of function that handles writes to a socket.
- * 
- *              Parameters are:
- *              1. The socket file descriptor (of type int).
- *              2. The data associated to that file descriptor (of type void *).
- * 
- *              These functions return `HandlerErrors`.
- */
-typedef HandlerErrors (* SockWriteHandler) (int, void *);
-
-/***********************************************************************************************/
-/* Table containing all socket type identifier and handlers                                    */
-/***********************************************************************************************/
-
-/*  XX(SOCKET_TYPE,             READ_HANDLER,                   WRITE_HANDLER               ) */
-
-#define SOCK_TYPES_AND_HANDLERS(XX)                                                           \
-    XX(SOCK_TYPE_SERVER4,       handle_server4,                 NULL                        ) \
-    XX(SOCK_TYPE_SERVER6,       handle_server6,                 NULL                        ) \
-    XX(SOCK_TYPE_CLIENT,        handle_client_read,             handle_client_write         ) \
-    XX(SOCK_TYPE_MANAGER,       handle_manager_read,            handle_manager_write        )
-
-/***********************************************************************************************/
-/* Autogenerated constant enumeration and function pointer arrays used by the server           */
-/***********************************************************************************************/
-
-/**
- * \enum        SockTypes: socket types used in the Selector.
- */
-typedef enum {
-    #define XX(sock_type_numeric, sock_read_handler, sock_write_handler) sock_type_numeric,
-    SOCK_TYPES_AND_HANDLERS(XX)
-    #undef XX
-    SOCK_TYPE_QTY
-} SockTypes;
 
 #endif // __SOCK_TYPES_H__

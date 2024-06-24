@@ -31,6 +31,12 @@
 #define MSG_ERR_UNK_SOCKET_TYPE     "Socket %d reported unknown type %d."
 
 /********************************************************/
+/* Normal log messages                                  */
+/********************************************************/
+
+#define MSG_NEW_CLIENT              "New client connected at %s : %d"
+
+/********************************************************/
 /* Verbose log messages                                 */
 /********************************************************/
 
@@ -43,7 +49,7 @@
 /********************************************************/
 
 #define MSG_DEBUG_SELECTOR_ADD      "Added fd %d (type %d) to Selector."
-#define MSG_DEBUG_SELECTOR_SELECT   "Performing select (2) operation."
-#define MSG_DEBUG_SOCKET_READY      "Socket %d is ready for %s operation."
+#define MSG_DEBUG_SELECTOR_SELECT   "Performing select operation."
+#define MSG_DEBUG_SOCKET_READY      "Fd %d (type %d) is ready for %s operation."
 
 #endif // __MESSAGES_H__

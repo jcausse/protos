@@ -218,7 +218,7 @@ static void smtpd_start(){
                 LOG_ERR(MSG_ERR_UNK_SOCKET_TYPE, sock_fd, sock_type);
                 continue;
             }
-            LOG_DEBUG(MSG_DEBUG_SOCKET_READY, sock_data, "READ");
+            LOG_DEBUG(MSG_DEBUG_SOCKET_READY, sock_fd, sock_type, "READ");
             read_handlers[sock_type](sock_fd, sock_data);
         }
         while ((sock_fd = Selector_write_next(selector, &sock_type, &sock_data)) != SELECTOR_NO_FD){
@@ -226,7 +226,7 @@ static void smtpd_start(){
                 LOG_ERR(MSG_ERR_UNK_SOCKET_TYPE, sock_fd, sock_type);
                 continue;
             }
-            LOG_DEBUG(MSG_DEBUG_SOCKET_READY, sock_data, "WRITE");
+            LOG_DEBUG(MSG_DEBUG_SOCKET_READY, sock_fd, sock_type, "WRITE");
             write_handlers[sock_type](sock_fd, sock_data);
         }
     }
