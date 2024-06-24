@@ -12,7 +12,7 @@
 #define __SOCKETS_H_2hf9742bc23__
 
 #include <sys/socket.h>     // socket(), AF_INET, AF_INET6, SOCK_STREAM
-#include <netinet/in.h>     // IPPROTO_TCP, INADDR_ANY, in6addr_any
+#include <netinet/in.h>     // IPPROTO_TCP, IPPROTO_UDP, INADDR_ANY, in6addr_any
 #include <arpa/inet.h>      // htons(), inet_pton()
 #include <stdint.h>         // uint16_t
 #include <string.h>         // memset()
@@ -51,8 +51,8 @@ int tcp_connect(
 /**
  * \brief       Create and bind passive sockets for both IPv4 and IPv6.
  * 
- * \param[in] port          Port to listen on.
- * \param[in] backlog       Backlog size for the listen queue.
+ * \param[in]  port         Port to listen on.
+ * \param[in]  backlog      Backlog size for the listen queue.
  * \param[out] ipv4_sockfd  IPv4 socket file descriptor.
  * \param[out] ipv6_sockfd  IPv6 socket file descriptor.
  * 
@@ -63,6 +63,19 @@ bool tcp_serve(
     unsigned int backlog,
     int * const ipv4_sockfd,
     int * const ipv6_sockfd
+);
+
+/**
+ * \brief       Create and bind a passive socket for both IPv4 and IPv6.
+ * 
+ * \param[in]  port         Port to listen on.
+ * \param[out] sockfd       Socket file descriptor.
+ * 
+ * \return      `true` on success, `false` on failure.
+ */
+bool udp_serve(
+    uint16_t port, 
+    int * sockfd
 );
 
 /**

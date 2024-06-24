@@ -137,6 +137,38 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
     return true;
 }
 
+bool udp_serve(uint16_t port, int * sockfd){
+    int fd;
+
+    /* Create socket */
+    if ((fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+        return false;
+    }
+
+    /* Allow dual stack (IPv4 and IPv6) */
+    int opt = 0;
+    if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt)) < 0) {
+        close(fd);
+        return false;
+    }
+
+    /* Create and setup address structure */
+    struct sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin6_family = AF_INET6;
+    addr.sin6_addr = in6addr_any;
+    addr.sin6_port = htons(port);
+
+    /* Bind the socket to the specified port */
+    if (bind(fd, (const struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        close(fd);
+        return false;
+    }
+
+    * sockfd = fd;
+    return true;
+}
+
 void safe_close(int fd){
     errno = 0;
     if (fd < 0){
