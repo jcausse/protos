@@ -12,6 +12,17 @@
 #include "utils/sockets.h"
 
 #define CLOSED 0
+#define MAX_DIR_SIZE 512 // Out file system has a 2-level directory to save the mails
+#define REL_TMP "../tmp"
+#define REL_INBOX "../inbox"
+#define RW_FOPEN "r+"
+
+#define SERVER_ERROR "421-%s Service not available, closing transmission channel.\r\n"
+#define MAIL_FROM_STR "MAIL FROM: <%s>\r\n"
+#define RCPT_TO_STR "RCPT TO: <%s>\r\n"
+#define DATA_STR "DATA\r\n"
+#define DOT_CLRF ".\r\n"
+#define LITERAL_STR "%s"
 
 /***********************************************************************************************/
 /* Extern global variables                                                                     */
@@ -48,6 +59,7 @@ SockWriteHandler write_handlers[] = {
 /***********************************************************************************************/
 /* Private helper declarations                                                                 */
 /***********************************************************************************************/
+char *strdup(const char *s);
 
 // Clears the first offset bytes in the array and reallocates
 // the string at the beggining of the array
@@ -252,15 +264,41 @@ HandlerErrors handle_client_read (int fd, void * data){
         case EHLO: clientData->clientDomain = strdup(structure->ehloDomain); break;
         case MAIL_FROM: clientData->senderMail = strdup(structure->mailFromStr); break;
         case RCPT_TO: {
-            char * receiverMails = strdup(structure->rcptToStr);
-            char userName[256] = {0};
-            int i = 0;
-            while(receiverMails[i++] != ':');
-            i++;
-            for(int j = 0; receiverMails[i] != '@' ;i++, j++) userName[j] = receiverMails[j];
+            clientData->receiverMails = strdup(structure->rcptToStr);
+            char fileName[MAX_DIR_SIZE] = {0};
 
+            time_t t = time(NULL);
+            struct tm tm = *localtime(&t);
+            sprintf(fileName, "%s/From:%s-%d-%02d-%02d %02d:%02d:%02d", REL_TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+            clientData->mailFile = fopen(fileName, RW_FOPEN);
+            if(clientData->mailFile == NULL) {
+                // Server error, should close the connection
+                char buff[WRITE_BUFF_SIZE] = {0};
+                sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                strcpy(clientData->w_buff, buff);
+                Selector_remove(selector, fd, SELECTOR_READ, false);
+                safe_close(fd);
+                return HANDLER_OK;
+            }
+            fprintf(clientData->mailFile, MAIL_FROM_STR, clientData->senderMail);
+            fprintf(clientData->mailFile, RCPT_TO_STR, clientData->receiverMails);
+            fprintf(clientData->mailFile, DATA_STR); // The next state will be the data
+            break;
         }
+        case DATA: {
+            if(strcmp(structure->dataStr, DOT_CLRF) == SUCCESS) {
+                // Handle transform
+            }
+            else{
+                fprintf(clientData->mailFile, LITERAL_STR,structure->dataStr);
+            }
+        }
+        default: break;
     }
+
+    // Status to inform the client to the client
+    strcpy(clientData->w_buff, clientData->parser->status);
+    clientData->w_count = strlen(clientData->w_buff);
     return HANDLER_OK;
 }
 
@@ -283,6 +321,8 @@ HandlerErrors handle_manager_read (int fd, void * data){
 HandlerErrors handle_client_write (int fd, void * data){
     (void) fd;
     ClientData clientData = (ClientData) data;
+
+    if(clientData->w_count < 1) return HANDLER_OK;
     ssize_t bytes = send(fd, clientData->w_buff, clientData->w_count, MSG_DONTWAIT);
     if(bytes == CLOSED) {
         Selector_remove(selector, fd, SELECTOR_READ_WRITE, true);
@@ -313,7 +353,7 @@ HandlerErrors handle_manager_write (int fd, void * data){
 
 static int clearBuff(int offset, char * buff) {
     int i = 0;
-    while(buff[offset] != '\0') {
+    while(offset < WRITE_BUFF_SIZE && buff[offset] != '\0') {
         buff[i] = buff[offset];
         buff[offset] = '\0';
         i++;
