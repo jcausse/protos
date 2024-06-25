@@ -253,6 +253,7 @@ HandlerErrors handle_client_read (int fd, void * data){
     LOG_DEBUG("readBuff: %sbytes: %lu", buff, bytes);
 
     if(buff[0] == '\r' || buff[0] == '\n'){
+        for(int i=0; i < WRITE_BUFF_SIZE ; i++) buff[i] = '\0';
         Selector_add(selector, fd, SELECTOR_WRITE, -1 , NULL);
         Selector_remove(selector, fd, SELECTOR_READ, false);
         return HANDLER_OK;
@@ -292,6 +293,7 @@ HandlerErrors handle_client_read (int fd, void * data){
         // useful and return a closing message to the client
         // DO NOT CLOSE THE SELECTOR_WRITE UNTIL THE CLOSING CONNECTION
         // MESSAGE IS SENT
+        for(int i=0; i < WRITE_BUFF_SIZE ; i++) buff[i] = '\0';
         clientData->parser->structure->cmd = QUIT;
         strcpy(clientData->w_buff, clientData->parser->status);
         Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
@@ -301,6 +303,7 @@ HandlerErrors handle_client_read (int fd, void * data){
     if(ret == ERR) {
         // Not new info has to be processed, all it is needed is
         // to inform the user the error it has in handle_client_write
+        for(int i=0; i < WRITE_BUFF_SIZE ; i++) buff[i] = '\0';
         Selector_add(selector, fd, SELECTOR_WRITE, - 1, NULL);
         Selector_remove(selector, fd, SELECTOR_READ, false);
         return HANDLER_OK;
@@ -389,6 +392,7 @@ HandlerErrors handle_client_read (int fd, void * data){
     }
     LOG_DEBUG("readResult: %s\n", clientData->parser->status);
 
+    for(int i=0; i < WRITE_BUFF_SIZE ; i++) buff[i] = '\0';
     Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_READ, false);
     return HANDLER_OK;
