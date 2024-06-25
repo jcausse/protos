@@ -51,6 +51,7 @@
 #define MSG_INFO_STATS_CREATED      "Statistics initialized."
 #define MSG_INFO_SELECTOR_CREATED   "Selector started."
 #define MSG_INFO_BAD_MNGR_COMMAND   "Manager sent an invalid command."
+#define MSG_INFO_MNGR_COMMAND       "Manager sent command %s (%02X)"
 
 /********************************************************/
 /* Debug log messages                                   */

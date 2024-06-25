@@ -106,8 +106,6 @@ int main(int argc, char *argv[]) {
         // Display additional information based on command
         if (command == CMD_TRANSFORMACIONES_OFF || command == CMD_TRANSFORMACIONES_ON) {
             printf("Transformation status = %s\n", res.booleano ? "ON" : "OFF");
-        } else if (command == CMD_VERIFY_OFF || command == CMD_VERIFY_ON) {
-            printf("Verify Status = %s\n", res.booleano ? "ON" : "OFF");
         }
     }
 
@@ -169,7 +167,5 @@ static void print_menu() {
     printf("3. Check transformation status\n");
     printf("4. Transformations ON\n");
     printf("5. Transformations OFF\n");
-    printf("6. Verify ON\n");
-    printf("7. Verify OFF\n");
     printf("Select a command (0-7): ");
 }

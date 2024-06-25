@@ -32,8 +32,6 @@ typedef enum {
     CMD_ESTADO_TRANSFORMACIONES = 0x03,  // Check transformations status command
     CMD_TRANSFORMACIONES_ON = 0x04,      // Enable transformations command
     CMD_TRANSFORMACIONES_OFF = 0x05,     // Disable transformations command
-    CMD_VERIFY_ON = 0x06,                // Enable verify command
-    CMD_VERIFY_OFF = 0x07                // Disable verify command
 } MngrCommand;
 
 // Possible responses
