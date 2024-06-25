@@ -15,19 +15,58 @@ June, 2024.
 
 1. Step 1
 ```bash:
-Insert some bash code here
+Run 'build.sh' to compile and create all necessary executable files
+(smtpd.bin and manager.bin)
 ```
-2. Step 2
-3. Step 3
-
 ## Usage
-
+SMTPD:
 1. Step 1
-```bash:
-Insert some bash code here
-```
+   In 'main.c', change the default smtpd log file in the defined constant CONFIG_LOG_FILE.
+
 2. Step 2
-3. Step 3
+   Run the smtpd.bin executable file with the following parameters:
+   
+MANAGER:
+1. Step 1
+   Run the manager.bin executable file with the following parameters:
 
 ## Command Line Parameters:
-* **-h / --help**: Print a help message and exit.
+
+SMTPD:
+
+   -d <domain name>: Domain name for the server.
+   
+   -s <SMTP port>: Port for the SMTP server.
+   
+   -p <management port>: Port for the manager server.
+
+   -l <log file path>: Path for smtpd logging output.
+      
+   Optional:
+   
+   -L <log level>: Minimum log level.
+   
+   -t <command path>: The transformation command to use.
+   
+   -f <vrfy dir>: The directory where already verified email addresses are stored and where new ones will be saved.
+   
+   -v: Prints version information and exits.
+   
+   -h: Prints available flags with their pertinent information.
+
+
+MANAGER: 
+
+   -i <SMTP server IP>: IP for the SMTP server.
+   
+   -p <SMTP server port>: SMTP server port.
+
+   Optional:
+   
+   -v: Prints version information and exits.
+   
+   -h: Prints available flags with their pertinent information.
+
+
+
+   
