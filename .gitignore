@@ -36,6 +36,7 @@
 *.x86_64
 *.hex
 smtpd
+manager
 
 # Debug files
 *.dSYM/
