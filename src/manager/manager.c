@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        if (command < 0 || command > 7) {
+        if (command < 0 || command > 5) {
             printf("Invalid command. Please select a number from 0 to 7.\n");
             continue;
         }

@@ -540,26 +540,26 @@ HandlerErrors handle_manager_write(int fd, void *data) {
 
             break;
 
-        case CMD_ESTADO_TRANSFORMACIONES:
-            response[5] = 0x00;  // Status: Success
-            response[14] = transform_enabled ? 0x01 : 0x00; // Transformation status as boolean
-            break;
+        // case CMD_ESTADO_TRANSFORMACIONES:
+        //     response[5] = 0x00;  // Status: Success
+        //     response[14] = transform_enabled ? 0x01 : 0x00; // Transformation status as boolean
+        //     break;
 
-        case CMD_TRANSFORMACIONES_ON:
-            response[5] = 0x00;  // Status: Success
-            response[14] = 0x01; // Boolean: 1 (TRUE)
+        // case CMD_TRANSFORMACIONES_ON:
+        //     response[5] = 0x00;  // Status: Success
+        //     response[14] = 0x01; // Boolean: 1 (TRUE)
 
-            transform_enabled = true;
+        //     transform_enabled = true;
 
-            break;
+        //     break;
 
-        case CMD_TRANSFORMACIONES_OFF:
-            response[5] = 0x00;  // Status: Success
-            response[14] = 0x00; // Boolean: 0 (FALSE)
+        // case CMD_TRANSFORMACIONES_OFF:
+        //     response[5] = 0x00;  // Status: Success
+        //     response[14] = 0x00; // Boolean: 0 (FALSE)
 
-            transform_enabled = false;
+        //     transform_enabled = false;
 
-            break;
+        //     break;
 
         default:
             response[5] = 0x03;  // Status: Invalid command
