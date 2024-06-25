@@ -155,7 +155,7 @@ static void smtpd_init(SMTPDArgs * const args){
         THROW_IF_NOT(
             udp_serve(
                 args->mngr_port,        // Management port
-                mngr_fd                 // Management socket (output parameter)
+                &mngr_fd                // Management socket (output parameter)
             )
         );                              // Expected return: true
         LOG_VERBOSE(MSG_INFO_MNG_SOCKET_CREATED, args->mngr_port);
