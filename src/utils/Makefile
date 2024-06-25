@@ -1,9 +1,12 @@
 CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -D_GNU_SOURCE -I ../lib/ -g
-UTILS := args.o selector.o sockets.o parser.o vrfy.o stats.o central.o slave.exe
+UTILS := args.o selector.o sockets.o parser.o vrfy.o stats.o manager_parser.o
+EXECS := central.exe slave.exe
 
 .PHONY: all clean
 
-all: $(UTILS)
+all: $(UTILS) $(EXECS)
+
+### OBJECT FILES
 
 args.o: args.c args.h
 	$(CC) $(CFLAGS) -c args.c -o args.o
@@ -23,11 +26,18 @@ vrfy.o: vrfy.c vrfy.h
 stats.o: stats.c stats.h
 	$(CC) $(CFLAGS) -c stats.c -o stats.o
 
+manager_parser.o: manager_parser.c manager_parser.h
+	$(CC) $(CFLAGS) -c manager_parser.c -o manager_parser.o
+
+### EXECUTABLES
+
 central.exe: central.c central.h
 	$(CC) $(CFLAGS) central.c -o central.exe
 
 slave.exe: slave.c
 	$(CC) $(CFLAGS) slave.c -o slave.exe
+
+### OTHER TARGETS
 
 clean:
 	- rm -f *.o *.gch *.exe
