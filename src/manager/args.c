@@ -66,6 +66,7 @@ static const char * team_members_ids[] ={
 
 bool parse_args(int argc, char **argv, UDPArgs *const result) {
     int c;
+    int flag = 0;
     while ((c = getopt(argc, argv, "hi:p:v")) != -1) {
         switch (c) {
             case 'h':
@@ -73,9 +74,11 @@ bool parse_args(int argc, char **argv, UDPArgs *const result) {
                 break;
             case 'i':
                 result->server_ip = optarg;
+                flag ++;
                 break;
             case 'p':
                 result->port = atoi(optarg);
+                flag ++;
                 break;
             case 'v':
                 fprintf(stdout, "Version info\n");
@@ -98,7 +101,7 @@ bool parse_args(int argc, char **argv, UDPArgs *const result) {
     }
 
     // Ensure mandatory options are set
-    if (!result->server_ip || result->port == 0) {
+    if (!result->server_ip || result->port == 0 || flag != 2) {
         fprintf(stderr, "Error: Missing required arguments.\n");
         usage(argv[0]);
     }
