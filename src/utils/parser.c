@@ -15,7 +15,7 @@
 #define SYNTAX_ERROR_MSG "500 Syntax error\r\n"
 #define PARAM_SYNTAX_ERROR_MSG "501 Syntax error in parameters or arguments\r\n"
 #define CMD_NOT_IMPLEMENTED_MSG "502  Command not implemented\r\n"
-#define VRFY_NOT_FOUND "553-Requested action not taken: mailbox name not allowed"
+#define VRFY_NOT_FOUND "553-Failure: Mailbox name not found\r\n"
 #define VRFY_AMBIGUOUS_MSG "553-Ambiguous; Possibilities are:\n%s\r\n"
 #define VRFY_AMBIGUOUS_INIT_LINE "553-<"
 #define VRFY_OK_MSG "250-<%s>\r\n"
@@ -31,7 +31,7 @@
 
 #define IPV4_REGEX "(\\b25[0-5]|\\b2[0-4][0-9]|\\b[01]?[0-9][0-9]?)(\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 #define IPV6_REGEX "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
-#define DOMAIN_REGEX "^(((?!-))(xn--|_)?[a-z0-9-]{0,61}[a-z0-9]{1,1}\\.)*(xn--)?([a-z0-9][a-z0-9\\-]{0,60}|[a-z0-9-]{1,30}\\.[a-z]{2,})$"
+#define DOMAIN_REGEX "^[0-9a-zA-Z]+((\\.[a-zA-Z]{2,})+([.][a-zA-Z]{2,3})?)?$"
 #define MAIL_REGEX "^((@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)|(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3},(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)+)?):)?[a-zA-Z0-9]+([._+-][a-zA-Z0-9]+)*@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?$"
 
 /**
@@ -245,8 +245,8 @@ static int welcomeEhloDomainTransition(Parser * parser, char * command) {
     strncpy(parsedCmd, command, len - 1);
 
     if( regexec(&domainRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS) == REG_NOMATCH
-     || regexec(&ipv4Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)   == REG_NOMATCH
-     || regexec(&ipv6Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)   == REG_NOMATCH){
+     && regexec(&ipv4Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)   == REG_NOMATCH
+     && regexec(&ipv6Regex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS)   == REG_NOMATCH){
         parser->machine->currentState = WELCOME;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -723,10 +723,10 @@ static void freeStruct(Parser * parser) {
  * all the arguments given by the client.
  */
 int compileRegexes(void) {
-    if((regcomp(&ipv4Regex, IPV4_REGEX, NO_FLAGS) != SUCCESS)     ||
-       (regcomp(&ipv6Regex, IPV6_REGEX, NO_FLAGS) != SUCCESS)     ||
-       (regcomp(&domainRegex, DOMAIN_REGEX, NO_FLAGS) != SUCCESS) ||
-       (regcomp(&mailRegex, MAIL_REGEX, NO_FLAGS) != SUCCESS)     ) return ERR;
+    if((regcomp(&ipv4Regex, IPV4_REGEX, REG_EXTENDED) != SUCCESS)     ||
+       (regcomp(&ipv6Regex, IPV6_REGEX, REG_EXTENDED) != SUCCESS)     ||
+       (regcomp(&domainRegex, DOMAIN_REGEX, REG_EXTENDED) != SUCCESS) ||
+       (regcomp(&mailRegex, MAIL_REGEX, REG_EXTENDED) != SUCCESS)     ) return ERR;
     return SUCCESS;
 }
 
