@@ -1,8 +1,8 @@
 /**
  * \file        main.c
- * \brief       SMTPD server main file. Starts SMTPD and starts 
+ * \brief       SMTPD server main file. Starts SMTPD and starts
  *              listening for client connections.
- * 
+ *
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
  */
@@ -10,15 +10,16 @@
 #include <stdio.h>
 #include <signal.h>
 
-#include "logger.h"
-#include "selector.h"
-#include "sockets.h"
+#include "lib/logger.h"
+#include "utils/selector.h"
+#include "utils/stats.h"
+#include "utils/sockets.h"
 #include "sock_types_handlers.h"
-#include "exceptions.h"
+#include "lib/exceptions.h"
 #include "messages.h"
-#include "args.h"
-#include "parser.h"
-#include "stats.h"
+#include "utils/args.h"
+#include "utils/parser.h"
+#include "utils/stats.h"
 
 #define BACKLOG_SIZE            10
 #define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log" // \todo HARDCODED
@@ -44,7 +45,7 @@ extern SockWriteHandler write_handlers[];
 
 /**
  * \brief       Initializes SMTPD.
- * 
+ *
  * \param[in] args      Command-line arguments
  */
 static void smtpd_init(SMTPDArgs * args);
@@ -56,7 +57,7 @@ static void smtpd_start(void);
 
 /**
  * \brief       Cleanup resources and exit with code `exit_code`.
- * 
+ *
  * \param[in] exit_code Integer passed to exit (3).
  */
 static void smtpd_cleanup(int exit_code);
@@ -69,7 +70,7 @@ static void smtpd_abort(void);
 /**
  * \brief       Captures `SIGINT` signal to gracefully stop SMTPD.
  * \details     Attempts to perform a cleanup of the Selector and the Logger.
- * 
+ *
  * \param[in] signum    According to the documentation, the handler receives the
  *                      signal number that triggered its call. In this case, `SIGINT`.
  */
@@ -264,7 +265,7 @@ static void smtpd_start(void){
             }
             smtpd_abort();
         }
-        
+
         /* Iterate through all ready file descriptors */
         int     sock_fd;
         int     sock_type;
