@@ -180,3 +180,38 @@ void safe_close(int fd){
     }
     while (ret != 0 && errno == EINTR);
 }
+
+bool get_client_addr(int fd, char ** ip, uint16_t * port) {
+    struct sockaddr_storage addr;
+    socklen_t addr_len = sizeof(addr);
+
+    if (getpeername(fd, (struct sockaddr *) &addr, &addr_len) == -1){
+        return false;
+    }
+
+    /* IPv4 sockets */
+    if (addr.ss_family == AF_INET) {
+        struct sockaddr_in * addr_in = (struct sockaddr_in *) &addr;
+        if (inet_ntop(AF_INET, &(addr_in->sin_addr), * ip, INET_ADDRSTRLEN) == NULL){
+            return false;
+        }
+        * port = ntohs(addr_in->sin_port);
+    }
+
+    /* IPv6 sockets */
+    else if (addr.ss_family == AF_INET6){
+        struct sockaddr_in6 * addr_in6 = (struct sockaddr_in6 *) &addr;
+        if (inet_ntop(AF_INET6, &(addr_in6->sin6_addr), * ip, INET6_ADDRSTRLEN) == NULL){
+            return false;
+        }
+        * port = ntohs(addr_in6->sin6_port);
+    } 
+    
+    /* Unsupported address family */
+    else {
+        return false;
+    }
+
+    return true;
+}
+

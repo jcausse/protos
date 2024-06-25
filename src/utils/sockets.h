@@ -85,8 +85,20 @@ bool udp_serve(
  *              function attempts to close the file descriptor again. Up
  *              to 5 retries.
  *
- * \param[in] fd          The file descriptor to close.
+ * \param[in] fd            The file descriptor to close.
  */
 void safe_close(int fd);
+
+/**
+ * \brief       Retrieves the IP address and remote port of the remote peer connected to a socket.
+ *              Works for both IPv4 (`AF_INET`) and IPv6 (`AF_INET6`) sockets.
+ *
+ * \param[in]  fd           The socket file descriptor.
+ * \param[out] ip           A pointer to a preallocated memory zone where to store the IP address.
+ * \param[out] port         A pointer where to store the remote port.
+ * 
+ * \return      true on success, false on error.
+ */
+bool get_client_addr(int fd, char **ip, uint16_t *port);
 
 #endif // __SOCKETS_H_2hf9742bc23__
