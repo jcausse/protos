@@ -114,7 +114,7 @@ HandlerErrors handle_server4 (int fd, void * _){
         else if (errno ==  EAGAIN || errno == EWOULDBLOCK){
             done = true;
         }
-    } while (! done);
+    } while (!done);
 
     return HANDLER_OK;
 }
@@ -247,6 +247,14 @@ HandlerErrors handle_client_read (int fd, void * data){
     // TODO - Handle custom parser return info (create files
     // and persist any important info such as directories
     // and mail info sent by the client
+    CommandStructure * structure = clientData->parser->structure;
+    switch(structure->cmd) {
+        case HELO: clientData->clientDomain = strdup(structure->heloDomain); break;
+        case EHLO: clientData->clientDomain = strdup(structure->ehloDomain); break;
+        case MAIL_FROM: {
+
+        }
+    }
     return HANDLER_OK;
 }
 

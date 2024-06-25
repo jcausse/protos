@@ -27,6 +27,11 @@ typedef struct _ClientData_t {
     char r_buff[WRITE_BUFF_SIZE];
     size_t r_count;
 
+    char * clientDomain;
+
+    char * senderMail;
+    char * receiverMail;
+
     FILE *mail_file;
 } _ClientData_t;
 
