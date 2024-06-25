@@ -11,6 +11,8 @@
 #include "domain.h"
 #include "utils/sockets.h"
 
+#define CLOSED 0
+
 /***********************************************************************************************/
 /* Extern global variables                                                                     */
 /***********************************************************************************************/
@@ -187,7 +189,7 @@ HandlerErrors handle_client_read (int fd, void * data){
     char buff[READ_BUFF_SIZE] = {0};
 
     ssize_t bytes = recv(fd, buff, READ_BUFF_SIZE, MSG_DONTWAIT);
-    if(bytes == 0) {
+    if(bytes == CLOSED) {
         Selector_remove(selector, fd, SELECTOR_READ_WRITE, true);
         safe_close(fd);
         return HANDLER_OK;
@@ -242,6 +244,9 @@ HandlerErrors handle_client_read (int fd, void * data){
         return HANDLER_OK;
     }
 
+    // TODO - Handle custom parser return info (create files
+    // and persist any important info such as directories
+    // and mail info sent by the client
     return HANDLER_OK;
 }
 
@@ -250,7 +255,19 @@ HandlerErrors handle_client_read (int fd, void * data){
  */
 HandlerErrors handle_manager_read (int fd, void * data){
     (void) fd;
-    (void) data;
+    ClientData clientData = (ClientData) data;
+    ssize_t bytes = send(fd, clientData->w_buff, clientData->w_count, MSG_DONTWAIT);
+    if(bytes == CLOSED) {
+        Selector_remove(selector, fd, SELECTOR_READ_WRITE, true);
+        safe_close(fd);
+        return HANDLER_OK;
+    }
+    else if(bytes == ERR && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        return HANDLER_OK;
+    }
+
+    // Clear buffer
+    clientData->w_count = clearBuff(bytes, clientData->w_buff);
     return HANDLER_OK;
 }
 
