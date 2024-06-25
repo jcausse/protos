@@ -437,7 +437,7 @@ static int mailFromTransition(Parser parser, char * command) {
     }
 
     char * mailArg = command + FROM_ARG_LEN;
-    unsigned long len = strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
+    unsigned long len =  (mailArg[strlen(mailArg)-3 == '\r'])?  strlen(mailArg) - CLRF_LEN + 1 : strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
     char parsedCmd[256] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
 
@@ -564,7 +564,7 @@ static int rcptToTransition(Parser parser, char * command) {
     }
 
     char * mailArg = command + TO_ARG_LEN;
-    unsigned long len = strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
+    unsigned long len =  (mailArg[strlen(mailArg)-3 == '\r'])?  strlen(mailArg) - CLRF_LEN + 1 : strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
     char parsedCmd[512] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
 
