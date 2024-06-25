@@ -1,5 +1,5 @@
-exec_name=smtpd
-target_exec_name=smtpd
+exec_name=smtpd.bin
+target_exec_name=smtpd.bin
 could_build=0
 
 if [ $# -ge 1 ]; then

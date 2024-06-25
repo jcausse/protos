@@ -1,5 +1,5 @@
-exec_name=manager
-target_exec_name=manager
+exec_name=manager.bin
+target_exec_name=manager.bin
 could_build=0
 
 if [ $# -ge 1 ]; then
