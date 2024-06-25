@@ -33,7 +33,6 @@
 #define IPV6_REGEX "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
 #define DOMAIN_REGEX "^[0-9a-zA-Z]+((\\.[a-zA-Z]{2,})+([.][a-zA-Z]{2,3})?)?$"
 #define MAIL_REGEX "^[a-zA-Z0-9]+([._+-][a-zA-Z0-9]+)*@[0-9a-zA-Z]+(\\.[a-zA-Z]{2,})+([.][a-zA-Z]{2,3})?$"
-#define RCPT_REGEX "^((@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)|(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3},(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)+)?):)?[a-zA-Z0-9]+([._+-][a-zA-Z0-9]+)*@[0-9a-zA-Z]+(\\.[a-zA-Z]{2,})+([.][a-zA-Z]{2,3})?$"
 
 /**
  * This is for parsing arguments given by the client, such as
@@ -100,7 +99,6 @@ static regex_t ipv4Regex;
 static regex_t ipv6Regex;
 static regex_t domainRegex;
 static regex_t mailRegex;
-static regex_t rcptRegex;
 
 // State transition functions
 static int welcomeTransition(Parser parser, char * command);
@@ -570,7 +568,7 @@ static int rcptToTransition(Parser parser, char * command) {
     char parsedCmd[512] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
 
-    if(regexec(&rcptRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS) == REG_NOMATCH){
+    if(regexec(&mailRegex, parsedCmd, NO_FLAGS, NULL, NO_FLAGS) == REG_NOMATCH){
         parser->machine->currentState = MAIL_FROM_OK;
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = malloc(sizeof(CommandStructure));
@@ -603,11 +601,9 @@ static int rcptToOkTransition(Parser parser, char * command) {
         return SUCCESS;
     }
     else if((strncmp(command, RCPT_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == SPACE){
-        parser->machine->currentState = RCPT_TO_OK;
-        parser->status = strdup(RCPT_TO_ALREADY_IN);
-        parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
-        parser->structure->cmd = ERROR;
-        return ERR;
+        char * mailArgs = command + CMD_LEN + 1;
+        parser->machine->currentState = RCPT_TO_INPUT;
+        return rcptToTransition(parser, mailArgs);
     }
     else if((strncmp(command, MAIL_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == SPACE){
         parser->machine->currentState = RCPT_TO_OK;
@@ -733,8 +729,7 @@ int compileRegexes(void) {
     if((regcomp(&ipv4Regex, IPV4_REGEX, REG_EXTENDED) != SUCCESS)     ||
        (regcomp(&ipv6Regex, IPV6_REGEX, REG_EXTENDED) != SUCCESS)     ||
        (regcomp(&domainRegex, DOMAIN_REGEX, REG_EXTENDED) != SUCCESS) ||
-       (regcomp(&mailRegex, MAIL_REGEX, REG_EXTENDED) != SUCCESS)     ||
-       (regcomp(&rcptRegex, RCPT_REGEX, REG_EXTENDED) != SUCCESS)     ) return ERR;
+       (regcomp(&mailRegex, MAIL_REGEX, REG_EXTENDED) != SUCCESS)    ) return ERR;
     return SUCCESS;
 }
 
