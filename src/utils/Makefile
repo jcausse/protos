@@ -1,4 +1,4 @@
-CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -I ../lib/ -g
+CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -D_GNU_SOURCE -I ../lib/ -g
 UTILS := args.o selector.o sockets.o parser.o vrfy.o
 
 .PHONY: all clean

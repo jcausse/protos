@@ -1,63 +1,62 @@
 #include "parser.h"
 #include "vrfy.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-void freeValidMails(char **validMails, int mails){
-    for (int i = 0; i < mails; i++){
+void freeValidMails(char **validMails, int mails) {
+    for (int i = 0; i < mails; i++) {
         free(validMails[i]);
     }
     free(validMails);
 }
 
-int vrfy(const char *query, const char *filePath, char *** validMails, int *mailCount){
+int vrfy(const char *query, const char *filePath, char ***validMails, int *mailCount) {
     FILE *file = fopen(filePath, "r");
-    if (file == NULL){
+    if (file == NULL) {
         // Use logger to print error
         return ERR;
     }
 
     *mailCount = 0;
-    *validMails = (char **) malloc(sizeof(char *));
+    *validMails = (char **)malloc(sizeof(char *));
 
     unsigned long queryLen = strlen(query);
 
     char *line = NULL;
-    size_t *mailLen;
-    while (getline(&line, mailLen, file) != ERR){
-        // If the mail is shorter than the query is not necessary to compare them
-        if(*mailLen < queryLen || (strncmp(query, line, queryLen) != SUCCESS)) {
-            free(mailLen);
+    size_t mailLen = 0;
+    while (getline(&line, &mailLen, file) != ERR) {
+        if (mailLen < queryLen || (strncmp(query, line, queryLen) != SUCCESS)) {
             free(line);
+            line = NULL; // Reset the line pointer to NULL for the next getline call
             continue;
-        };
+        }
 
         // Allocate memory for a new email
         *validMails = realloc(*validMails, (*mailCount + 1) * sizeof(char *));
-        if (!*validMails){
+        if (!*validMails) {
             // Use logger to log error
             freeValidMails(*validMails, *mailCount);
             free(line);
-            free(mailLen);
             fclose(file);
             return ERR;
         }
 
         // Copy the email into the allocated memory
         (*validMails)[*mailCount] = strdup(line);
-        if (!(*validMails)[*mailCount]){
+        if (!(*validMails)[*mailCount]) {
             // Use logger to log error
             freeValidMails(*validMails, *mailCount);
             free(line);
-            free(mailLen);
             fclose(file);
             return ERR;
         }
         free(line);
-        free(mailLen);
+        line = NULL; // Reset the line pointer to NULL for the next getline call
         (*mailCount)++;
     }
 
     free(line);
-    free(mailLen);
     fclose(file);
     return SUCCESS;
 }
