@@ -15,19 +15,18 @@ June, 2024.
 
 1. Step 1
 ```bash:
-Insert some bash code here
+Run 'build.sh' to compile and create all necessary executable files
+(smtpd.bin and manager.bin)
 ```
-2. Step 2
-3. Step 3
-
 ## Usage
 
 1. Step 1
-```bash:
-Insert some bash code here
-```
+   In 'main.c', change the default smtpd log file in the defined constant.
+
 2. Step 2
-3. Step 3
+   Run the smtpd.bin executable file with the following parameters:
+   
+
 
 ## Command Line Parameters:
 * **-h / --help**: Print a help message and exit.
