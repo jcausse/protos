@@ -18,6 +18,7 @@
 #include "lib/logger.h"
 #include "utils/selector.h"
 #include "messages.h"
+#include "utils/stats.h"
 
 /***********************************************************************************************/
 /* Custom data type definitions                                                                */
@@ -27,7 +28,8 @@
  * \enum        HandlerErrors: errors returned by socket READ / WRITE handlers.
  */
 typedef enum{
-    HANDLER_OK      = 0,        // No error occurred
+    HANDLER_OK      =  0,       // No error occurred.
+    HANDLER_NO_MEM  = -1,       // No memory available.
 } HandlerErrors;
 
 /**

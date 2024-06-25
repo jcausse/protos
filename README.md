@@ -9,6 +9,8 @@ June, 2024.
 
 * **62351** - Sendot, Francisco
 
+* **61374** - Garcia Lauberer, Federico Inti
+
 ## Instalation Guide
 
 1. Step 1

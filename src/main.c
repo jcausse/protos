@@ -40,7 +40,6 @@ Stats       stats       = NULL;     // Stats (see src/utils/stats.h)
 extern SockReadHandler  read_handlers[];
 extern SockWriteHandler write_handlers[];
 
-
 /****************************************************************/
 /* Private function declarations                                */
 /****************************************************************/
@@ -78,15 +77,18 @@ static void smtpd_abort(void);
  */
 void sigint_handler(int sigint);
 
+/****************************************************************/
+/* Main function                                                */
+/****************************************************************/
+
+// \todo revisar
+#if 0
 typedef struct{
     int pid;                    //Process pid
     int toSlavePipe[2];         //Pipes to send and receive messages to the slave
     int fromSlavePipe[2];
 } SlaveInfo;
 
-/****************************************************************/
-/* Main function                                                */
-/****************************************************************/
 SlaveInfo create_transformer(char* command){    
 
     SlaveInfo slave;
@@ -133,33 +135,41 @@ void free_transformer(SlaveInfo slave){
 
 int transform_mail(char* file_name, SlaveInfo central){
     char outputBuffer[MAX_BUFFER_SIZE];
-    ssize_t nbytes   
+    ssize_t nbytes;
     /*Send file to slave*/
     write(central.toSlavePipe[1], file_name, strlen(file_name) + 1);
     /*Get answer from the slave*/
     nbytes = read(central.fromSlavePipe[0], outputBuffer, sizeof(outputBuffer) - 1);
-        if (nbytes > 0) {
-            outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
-            if (strcmp(outputBuffer, SUCCESS) == 0) {
-               return 254;
-            } else {
-                return 255;
-            }
+    if (nbytes > 0) {
+        outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
+        if (strcmp(outputBuffer, SUCCESS) == 0) {
+            return 254;
         } else {
-            perror("read from slave");
-            return EXIT_FAILURE;
+            return 255;
         }
+    } else {
+        perror("read from slave");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
+#endif
 
 int main(int argc, char ** argv){
     /* Parse command-line arguments */
     SMTPDArgs args;
+
+// \todo revisar
+#if 0
     SlaveInfo central;
+#endif
 
     if (! parse_args(argc, argv, &args)){
         return EXIT_FAILURE;
     }
 
+// \todo revisar
+#if 0
     if(args.trsf_enabled == true){
         central = create_transformer(args.trsf_cmd);
     }
@@ -180,7 +190,8 @@ int main(int argc, char ** argv){
         }
     }
     // \todo mover
-    
+#endif
+
     /* Initialize and start server */
     smtpd_init(&args);                  // Initialize SMTPD.
     smtpd_start();                      // Start SMTPD. Only returns on error.
@@ -354,10 +365,12 @@ static void smtpd_start(void){
         LOG_DEBUG(MSG_DEBUG_SELECTOR_SELECT);
         SelectorErrors err = Selector_select(selector);     // Blocking
         if (err != SELECTOR_OK){
+
+            /* Abort on Select error */
             if (err == SELECTOR_SELECT_ERR){
                 LOG_ERR(MSG_ERR_SELECT);
             }
-            smtpd_abort();
+            return;
         }
 
         /* Iterate through all ready file descriptors */
@@ -365,22 +378,42 @@ static void smtpd_start(void){
         int     sock_type;
         void *  sock_data;
         while ((sock_fd = Selector_read_next(selector, &sock_type, &sock_data)) != SELECTOR_NO_FD){
+
+            /* Prevent errors from invalid socket types */
             if (sock_type < 0 || sock_type >= SOCK_TYPE_QTY){
                 Selector_remove(selector, sock_fd, SELECTOR_READ_WRITE, true);
                 LOG_ERR(MSG_ERR_UNK_SOCKET_TYPE, sock_fd, sock_type);
                 continue;
             }
+
+            /* Call handler for that socket type */
             LOG_DEBUG(MSG_DEBUG_SOCKET_READY, sock_fd, sock_type, "READ");
-            read_handlers[sock_type](sock_fd, sock_data);
+            HandlerErrors ret = read_handlers[sock_type](sock_fd, sock_data);
+
+            /* Abort on no memory */
+            if (ret == HANDLER_NO_MEM){
+                LOG_ERR(MSG_ERR_NO_MEM);
+                return;
+            }
         }
         while ((sock_fd = Selector_write_next(selector, &sock_type, &sock_data)) != SELECTOR_NO_FD){
+
+            /* Prevent errors from invalid socket types */
             if (sock_type < 0 || sock_type >= SOCK_TYPE_QTY){
                 Selector_remove(selector, sock_fd, SELECTOR_READ_WRITE, true);
                 LOG_ERR(MSG_ERR_UNK_SOCKET_TYPE, sock_fd, sock_type);
                 continue;
             }
+
+            /* Call handler for that socket type */
             LOG_DEBUG(MSG_DEBUG_SOCKET_READY, sock_fd, sock_type, "WRITE");
-            write_handlers[sock_type](sock_fd, sock_data);
+            HandlerErrors ret = write_handlers[sock_type](sock_fd, sock_data);
+
+            /* Abort on no memory */
+            if (ret == HANDLER_NO_MEM){
+                LOG_ERR(MSG_ERR_NO_MEM);
+                return;
+            }
         }
     }
 }
@@ -388,6 +421,7 @@ static void smtpd_start(void){
 static void smtpd_cleanup(int exit_code){
     Selector_cleanup(selector);     // NULL-safe
     Logger_cleanup(logger);         // NULL-safe
+    Stats_cleanup(stats);           // NUll-safe
     exit(exit_code);
 }
 
