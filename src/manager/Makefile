@@ -10,7 +10,7 @@ args.o: args.c args.h
 	$(CC) $(CFLAGS) -c args.c -o args.o
 
 $(EXEC_NAME): manager.c manager.h
-	$(CC) $(CFLAGS) manager.c -o $(EXEC_NAME)
+	$(CC) $(CFLAGS) manager.c args.o -o $(EXEC_NAME)
 
 clean:
 	- rm -f $(EXEC_NAME) *.o
