@@ -373,7 +373,7 @@ HandlerErrors handle_manager_read (int fd, void * data){
         LOG_VERBOSE(" Manager sent an invalid command.");
         return HANDLER_NO_OP;
     }
-
+    LOG_VERBOSE("DETECTED %d\n", current_manager_cmd = cmd);
 
     Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_READ, false);
@@ -498,7 +498,7 @@ HandlerErrors handle_manager_write(int fd, void *data) {
         manager_addr_len
     );
     LOG_VERBOSE("%d", manager_addr_len);
-    LOG_VERBOSE("%d", response[5]);
+    LOG_VERBOSE("cmd = %d", current_manager_cmd);
     
     Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_WRITE, false);

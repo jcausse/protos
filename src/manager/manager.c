@@ -125,7 +125,7 @@ static void send_request(int sockfd, const struct sockaddr *addr, socklen_t addr
     buffer[3] = (req->identifier >> 8) & 0xFF;
     buffer[4] = req->identifier & 0xFF;
     memcpy(buffer + 5, req->auth, 8);
-    buffer[13] = req->command;
+    buffer[14] = req->command;
 
     // Send the request
     if (sendto(sockfd, buffer, sizeof(buffer), 0, addr, addrlen) != sizeof(buffer)) {
