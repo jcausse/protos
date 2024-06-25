@@ -41,9 +41,9 @@ bool manager_parse(const uint8_t *buff, size_t len, MngrCommand *cmd) {
         case CMD_CONEX_HISTORICAS:
         case CMD_CONEX_CONCURRENTES:
         case CMD_BYTES_TRANSFERIDOS:
-        case CMD_ESTADO_TRANSFORMACIONES:
-        case CMD_TRANSFORMACIONES_ON:
-        case CMD_TRANSFORMACIONES_OFF:
+        // case CMD_ESTADO_TRANSFORMACIONES:
+        // case CMD_TRANSFORMACIONES_ON:
+        // case CMD_TRANSFORMACIONES_OFF:
             *cmd = (MngrCommand)command_byte;
             return true;
         default:

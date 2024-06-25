@@ -28,10 +28,10 @@ Size (bytes)    | 1  | 1          | 1        | 2            | 1         | 8     
 typedef enum {
     CMD_CONEX_HISTORICAS = 0x00,         // Historical connections count command
     CMD_CONEX_CONCURRENTES = 0x01,       // Concurrent connections count command
-    CMD_BYTES_TRANSFERIDOS = 0x02,       // Bytes transferred count command
-    CMD_ESTADO_TRANSFORMACIONES = 0x03,  // Check transformations status command
-    CMD_TRANSFORMACIONES_ON = 0x04,      // Enable transformations command
-    CMD_TRANSFORMACIONES_OFF = 0x05,     // Disable transformations command
+    CMD_BYTES_TRANSFERIDOS = 0x02       // Bytes transferred count command
+    // CMD_ESTADO_TRANSFORMACIONES = 0x03,  // Check transformations status command
+    // CMD_TRANSFORMACIONES_ON = 0x04,      // Enable transformations command
+    // CMD_TRANSFORMACIONES_OFF = 0x05,     // Disable transformations command
 } MngrCommand;
 
 // Possible responses

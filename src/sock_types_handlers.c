@@ -13,13 +13,14 @@
 #include "utils/client_data.h"
 #include "domain.h"
 #include "utils/sockets.h"
+#include "utils/transform.h"
 
 #define CLOSED 0
 #define MANAGER_READ_BUFF_SIZE 15
 #define MAX_DIR_SIZE 512 // Out file system has a 2-level directory to save the mails
 #define REL_TMP "../tmp"
 #define REL_INBOX "../inbox"
-#define RW_FOPEN "r+"
+#define RW_FOPEN "a+"
 
 #define SERVER_ERROR "421-%s Service not available, closing transmission channel.\r\n"
 #define MAIL_FROM_STR "MAIL FROM: <%s>\r\n"
@@ -46,6 +47,10 @@ extern Stats        stats;
 
 extern bool         transform_enabled;
 extern char *       domain;
+extern char        *transform_cmd;
+
+extern bool        vrfy_enabled;
+extern char        *vrfy_mails;
 
 /***********************************************************************************************/
 /* Read / Write handler pointer arrays                                                         */
@@ -78,7 +83,7 @@ char *strdup(const char *s);
 
 // Clears the first offset bytes in the array and reallocates
 // the string at the beggining of the array
-static int clearBuff(int offset, char * buff);
+//static int clearBuff(int offset, char * buff);
 
 #define RESPONSE_SIZE 15
 
@@ -245,6 +250,20 @@ HandlerErrors handle_client_read (int fd, void * data){
         return HANDLER_OK;
     }
 
+    LOG_DEBUG("readBuff: %sbytes: %lu", buff, bytes);
+    if(buff[0] == '\r' || buff[0] == '\n'){
+        for(int i=0; i < READ_BUFF_SIZE ; i++) buff[i] = '\0';
+        Selector_add(selector, fd, SELECTOR_WRITE, -1 , NULL);
+        Selector_remove(selector, fd, SELECTOR_READ, false);
+        return HANDLER_OK;
+    }
+
+    int i = 0;
+    while(buff[i] != '\r' && buff[i] != '\n') i++;
+    i += 2;
+    while(i < READ_BUFF_SIZE) buff[i++] = '\0';
+
+    /*
     char aux[READ_BUFF_SIZE] = {0};
 
     if(clientData->r_count != 0) {
@@ -258,7 +277,6 @@ HandlerErrors handle_client_read (int fd, void * data){
 
     size_t read = strlen(aux);
     int i = 0;
-
     while(i < bytes && buff[i] != '\n' && buff[i] != '\0') {
         aux[i + read] = buff[i];
         i++;
@@ -271,13 +289,17 @@ HandlerErrors handle_client_read (int fd, void * data){
         }
         return HANDLER_OK;
     }
-    int ret = parseCmd(clientData->parser, aux);
+    LOG_DEBUG("auxCmd: %s\n", aux);
+    */
+    int ret = parseCmd(clientData->parser, buff);
     if(ret == TERMINAL) {
         // State on the client has been achieved, need to free
         // file resources, discard temp files created that are not
         // useful and return a closing message to the client
         // DO NOT CLOSE THE SELECTOR_WRITE UNTIL THE CLOSING CONNECTION
         // MESSAGE IS SENT
+        for(int i=0; i < WRITE_BUFF_SIZE ; i++) buff[i] = '\0';
+        clientData->parser->structure->cmd = QUIT;
         strcpy(clientData->w_buff, clientData->parser->status);
         Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
         Selector_remove(selector, fd, SELECTOR_READ, false);
@@ -286,9 +308,8 @@ HandlerErrors handle_client_read (int fd, void * data){
     if(ret == ERR) {
         // Not new info has to be processed, all it is needed is
         // to inform the user the error it has in handle_client_write
-        strcpy(clientData->w_buff, clientData->parser->status);
-        clientData->w_count = strlen(clientData->w_buff);
-        Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
+        for(int i=0; i < WRITE_BUFF_SIZE ; i++) buff[i] = '\0';
+        Selector_add(selector, fd, SELECTOR_WRITE, - 1, NULL);
         Selector_remove(selector, fd, SELECTOR_READ, false);
         return HANDLER_OK;
     }
@@ -308,8 +329,10 @@ HandlerErrors handle_client_read (int fd, void * data){
 
             time_t t = time(NULL);
             struct tm tm = *localtime(&t);
-            sprintf(fileName, "%s/From:%s-%d-%02d-%02d %02d:%02d:%02d", REL_TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+            sprintf(fileName, "%s/%s - %d-%02d-%02d - %02d %02d %02d", TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
             clientData->mailFile = fopen(fileName, RW_FOPEN);
+            LOG_DEBUG("mailFilePtr -> %p", clientData->mailFile);
+
             if(clientData->mailFile == NULL) {
                 // Server error, should close the connection
                 char buff[WRITE_BUFF_SIZE] = {0};
@@ -317,33 +340,77 @@ HandlerErrors handle_client_read (int fd, void * data){
                 strcpy(clientData->w_buff, buff);
                 Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
                 Selector_remove(selector, fd, SELECTOR_READ, false);
-                safe_close(fd);
                 return HANDLER_OK;
             }
             fprintf(clientData->mailFile, MAIL_FROM_STR, clientData->senderMail);
             fprintf(clientData->mailFile, RCPT_TO_STR, clientData->receiverMails[clientData->receiverMailsAmount-1]);
-            fprintf(clientData->mailFile, DATA_STR); // The next state will be the data
             break;
         }
         case DATA: {
-            if(strcmp(structure->dataStr, DOT_CLRF) == SUCCESS) {
-                // Handle transform
-            }
-            else{
+            if(structure->dataStr != NULL && strncmp(structure->dataStr, DOT_CLRF, strlen(DOT_CLRF)) == SUCCESS) {
                 fprintf(clientData->mailFile, LITERAL_STR,structure->dataStr);
+
+                time_t t = time(NULL);
+                struct tm tm = *localtime(&t);
+
+                char fileLoc[MAX_DIR_SIZE] = {0};
+                char filename[MAX_DIR_SIZE] = {0};
+                sprintf(fileLoc, "%s/From:%s|%d-%02d-%02d %02d:%02d:%02d", TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+                sprintf(filename, "From:%s|%d-%02d-%02d %02d:%02d:%02d", clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+                char userName[MAX_DIR_SIZE/2] = {0};
+                char domain[MAX_DIR_SIZE/2] = {0};
+                for(int i = 0; i < clientData->receiverMailsAmount ;i++){
+                    int receiverLen = strlen(clientData->receiverMails[i]);
+                    int j = 0;
+                    while(j < receiverLen && clientData->receiverMails[i][j] != '@'){
+                        userName[j] = clientData->receiverMails[i][j];
+                        j++;
+                    }
+                    j++;
+                    while(j < receiverLen && clientData->receiverMails[i][j] != '\r' && clientData->receiverMails[i][j] != '\n' ){
+                        domain[j] = clientData->receiverMails[i][j];
+                        j++;
+                    }
+                    // fflush(clientData->mailFile);
+                    // fclose(clientData->mailFile);
+                    int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, fileLoc, domain, userName, filename);
+                    
+                    if(ret == ERR) {
+                        if(clientData->mailFile == NULL) {
+                            // Server error, should close the connection
+                            char buff[WRITE_BUFF_SIZE] = {0};
+                            sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                            strcpy(clientData->w_buff, buff);
+                            Selector_remove(selector, fd, SELECTOR_READ, false);
+                            safe_close(fd);
+                            return HANDLER_OK;
+                        }
+                    }
+                    for(int k = 0; k < MAX_DIR_SIZE/2 ;k++){
+                        userName[k] = '\0';
+                        domain[k] = '\0';
+                    }
+                }
+                for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
+                clientData->receiverMailsAmount = 0;
             }
+            else if(structure->dataStr != NULL){
+                LOG_DEBUG("Command Read: %s", structure->dataStr);
+                fprintf(clientData->mailFile, LITERAL_STR, structure->dataStr);
+            }
+            else {
+                fprintf(clientData->mailFile, DATA_STR); // The next state will be the data
+            }
+            // fclose(clientData->mailFile);
         }
         default: break;
     }
+    LOG_DEBUG("readResult: %s\n", clientData->parser->status);
 
-    // Status to inform the client to the client
-    strcpy(clientData->w_buff, clientData->parser->status);
-    clientData->w_count = strlen(clientData->w_buff);
-
-
+    for(int i=0; i < WRITE_BUFF_SIZE ; i++) buff[i] = '\0';
     Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_READ, false);
-
     return HANDLER_OK;
 }
 
@@ -357,9 +424,15 @@ HandlerErrors handle_manager_read (int fd, void * data){
     ssize_t read_bytes;
 
     /* Attempt to read from socket */
-    read_bytes = recvfrom(fd, buffer, MANAGER_READ_BUFF_SIZE, MSG_DONTWAIT,
-                          (struct sockaddr *) &manager_addr, &manager_addr_len);
-    
+    read_bytes = recvfrom(
+        fd,
+        buffer,
+        MANAGER_READ_BUFF_SIZE * sizeof(buffer[0]),
+        MSG_DONTWAIT,
+        (struct sockaddr *) &manager_addr,
+        &manager_addr_len
+    );
+
     LOG_VERBOSE("Received %ld bytes from manager", read_bytes);
 
     /* If an error occurred, return */
@@ -391,12 +464,17 @@ HandlerErrors handle_manager_read (int fd, void * data){
 HandlerErrors handle_client_write (int fd, void * data){
     ClientData clientData = (ClientData) data;
 
+    LOG_DEBUG("writeBuff: %s\n", clientData->parser->status);
+
     if(clientData->w_count < 1){
         //return HANDLER_OK;
     }
 
+    LOG_DEBUG("writeBuff: %s\n", clientData->parser->status);
 
     if(clientData->parser->status == NULL){
+        Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
+        Selector_remove(selector, fd, SELECTOR_WRITE, false);
         return HANDLER_OK;
     }
 
@@ -462,26 +540,26 @@ HandlerErrors handle_manager_write(int fd, void *data) {
 
             break;
 
-        case CMD_ESTADO_TRANSFORMACIONES:
-            response[5] = 0x00;  // Status: Success
-            response[14] = transform_enabled ? 0x01 : 0x00; // Transformation status as boolean
-            break;
+        // case CMD_ESTADO_TRANSFORMACIONES:
+        //     response[5] = 0x00;  // Status: Success
+        //     response[14] = transform_enabled ? 0x01 : 0x00; // Transformation status as boolean
+        //     break;
 
-        case CMD_TRANSFORMACIONES_ON:
-            response[5] = 0x00;  // Status: Success
-            response[14] = 0x01; // Boolean: 1 (TRUE)
+        // case CMD_TRANSFORMACIONES_ON:
+        //     response[5] = 0x00;  // Status: Success
+        //     response[14] = 0x01; // Boolean: 1 (TRUE)
 
-            transform_enabled = true;
+        //     transform_enabled = true;
 
-            break;
+        //     break;
 
-        case CMD_TRANSFORMACIONES_OFF:
-            response[5] = 0x00;  // Status: Success
-            response[14] = 0x00; // Boolean: 0 (FALSE)
+        // case CMD_TRANSFORMACIONES_OFF:
+        //     response[5] = 0x00;  // Status: Success
+        //     response[14] = 0x00; // Boolean: 0 (FALSE)
 
-            transform_enabled = false;
+        //     transform_enabled = false;
 
-            break;
+        //     break;
 
         default:
             response[5] = 0x03;  // Status: Invalid command
@@ -499,7 +577,7 @@ HandlerErrors handle_manager_write(int fd, void *data) {
     );
     LOG_VERBOSE("%d", manager_addr_len);
     LOG_VERBOSE("cmd = %d", current_manager_cmd);
-    
+
     Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_WRITE, false);
 
@@ -510,7 +588,7 @@ HandlerErrors handle_manager_write(int fd, void *data) {
 /* Private helper definitions                                                                  */
 /***********************************************************************************************/
 
-static int clearBuff(int offset, char * buff) {
+/*static int clearBuff(int offset, char * buff) {
     LOG_DEBUG("beforeClear: %s", buff);
     int i = 0;
     while(offset < WRITE_BUFF_SIZE && buff[offset] != '\0') {
@@ -523,6 +601,7 @@ static int clearBuff(int offset, char * buff) {
     while(i < offset) buff[i] = '\0';
     return strlen(buff);
 }
+
 
 // static const char * get_cmd_string(MngrCommand cmd){
 //     switch(cmd){
@@ -542,4 +621,4 @@ static int clearBuff(int offset, char * buff) {
 //             break;
 //     }
 //     return "";
-// }
+// }*/
