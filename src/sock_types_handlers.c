@@ -45,6 +45,7 @@ extern Selector     selector;
 extern Stats        stats;
 
 extern bool         transform_enabled;
+extern char *       domain;
 
 /***********************************************************************************************/
 /* Read / Write handler pointer arrays                                                         */
@@ -111,7 +112,7 @@ HandlerErrors handle_server4 (int fd, void * _){
                 data->r_buff[i] = '\0';
                 data->w_buff[i] = '\0';
             }
-            data->parser = initParser(DOMAIN);
+            data->parser = initParser(domain);
             data->receiverMails = (char **) malloc(sizeof(char *));
             data->receiverMailsAmount = 0;
             data->r_count = 0;
@@ -177,7 +178,7 @@ HandlerErrors handle_server6 (int fd, void * _){
                 data->r_buff[i] = '\0';
                 data->w_buff[i] = '\0';
             }
-            data->parser = initParser(DOMAIN);
+            data->parser = initParser(domain);
             data->receiverMails = (char **) malloc(sizeof(char *));
             data->receiverMailsAmount = 0;
             data->r_count = 0;
@@ -249,9 +250,10 @@ HandlerErrors handle_client_read (int fd, void * data){
 
     size_t read = strlen(aux);
     int i = 0;
+
     while(i < bytes && buff[i] != '\n' && buff[i] != '\0') {
         aux[i + read] = buff[i];
-        read++;
+        i++;
     }
 
     if(i != bytes || aux[i + read] == '\0') { // Not a full command
@@ -376,11 +378,16 @@ HandlerErrors handle_manager_read (int fd, void * data){
  * \todo
  */
 HandlerErrors handle_client_write (int fd, void * data){
-    (void) fd;
+    LOG_MSG("ACAAAAAAAAAAA");
+
     ClientData clientData = (ClientData) data;
 
-    if(clientData->w_count < 1) return HANDLER_OK;
-    ssize_t bytes = send(fd, clientData->w_buff, clientData->w_count, MSG_DONTWAIT);
+    if(clientData->w_count < 1){
+        //return HANDLER_OK;
+    }
+
+    LOG_DEBUG("status: %s", clientData->parser->status);
+    ssize_t bytes = send(fd, clientData->parser->status, strlen(clientData->parser->status), MSG_DONTWAIT);
     if(bytes == CLOSED) {
         Selector_remove(selector, fd, SELECTOR_READ_WRITE, true);
         safe_close(fd);
