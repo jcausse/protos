@@ -4,6 +4,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define BUFF_SIZE 256
+
+char *strdup(const char *s);
+static void clearLine(char *line);
+
 void freeValidMails(char **validMails, int mails) {
     for (int i = 0; i < mails; i++) {
         free(validMails[i]);
@@ -23,12 +28,10 @@ int vrfy(const char *query, const char *filePath, char ***validMails, int *mailC
 
     unsigned long queryLen = strlen(query);
 
-    char *line = NULL;
-    size_t mailLen = 0;
-    while (getline(&line, &mailLen, file) != ERR) {
-        if (mailLen < queryLen || (strncmp(query, line, queryLen) != SUCCESS)) {
-            free(line);
-            line = NULL; // Reset the line pointer to NULL for the next getline call
+    char line[BUFF_SIZE];
+    while (fgets(line, BUFF_SIZE, file) != NULL) {
+        if (strlen(line) <= queryLen || (strstr(line, query) == NULL)) {
+            clearLine(line);
             continue;
         }
 
@@ -37,7 +40,6 @@ int vrfy(const char *query, const char *filePath, char ***validMails, int *mailC
         if (!*validMails) {
             // Use logger to log error
             freeValidMails(*validMails, *mailCount);
-            free(line);
             fclose(file);
             return ERR;
         }
@@ -47,16 +49,19 @@ int vrfy(const char *query, const char *filePath, char ***validMails, int *mailC
         if (!(*validMails)[*mailCount]) {
             // Use logger to log error
             freeValidMails(*validMails, *mailCount);
-            free(line);
             fclose(file);
             return ERR;
         }
-        free(line);
-        line = NULL; // Reset the line pointer to NULL for the next getline call
+        clearLine(line);
         (*mailCount)++;
     }
-
-    free(line);
+    if(*mailCount < 1) {
+        freeValidMails(*validMails, *mailCount);
+        return ERR;
+    }
     fclose(file);
     return SUCCESS;
+}
+static void clearLine(char *line) {
+    for(int i = 0; i < BUFF_SIZE || line[i] != '\0'; i++) line[i] = '\0';
 }

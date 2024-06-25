@@ -32,7 +32,7 @@
 #define IPV4_REGEX "(\\b25[0-5]|\\b2[0-4][0-9]|\\b[01]?[0-9][0-9]?)(\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 #define IPV6_REGEX "(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
 #define DOMAIN_REGEX "^[0-9a-zA-Z]+((\\.[a-zA-Z]{2,})+([.][a-zA-Z]{2,3})?)?$"
-#define MAIL_REGEX "^((@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)|(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3},(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)+)?):)?[a-zA-Z0-9]+([._+-][a-zA-Z0-9]+)*@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?$"
+#define MAIL_REGEX "^((@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)|(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3},(@[0-9a-zA-Z]+.[a-zA-Z]{2,4}+([.][a-zA-Z]{2,3})?)+)?):)?[a-zA-Z0-9]+([._+-][a-zA-Z0-9]+)*@[0-9a-zA-Z]+(\\.[a-zA-Z]{2,})+([.][a-zA-Z]{2,3})?$"
 
 /**
  * This is for parsing arguments given by the client, such as
@@ -54,10 +54,10 @@
 #define TRFM_CMD "TRFM"
 #define CMD_LEN 4
 
-#define FROM_ARG " FROM: <"
+#define FROM_ARG "FROM: <"
 #define FROM_ARG_LEN strlen(FROM_ARG)
 
-#define TO_ARG " TO: <"
+#define TO_ARG "TO: <"
 #define TO_ARG_LEN strlen(TO_ARG)
 
 #define DATA_CMD "DATA"
@@ -135,12 +135,12 @@ static int welcomeTransition(Parser * parser, char * command) {
     if(parser->structure != NULL) freeStruct(parser);
     toUpperCmd(command);
 
-    if(strncmp(command, HELO_CMD, CMD_LEN) == SUCCESS) {
+    if(strncmp(command, HELO_CMD, CMD_LEN) == SUCCESS && command[CMD_LEN] == SPACE) {
         parser->machine->currentState = HELO_DOMAIN;
         char * helloDomain = command + CMD_LEN + 1;
         return welcomeHeloDomainTransition(parser, helloDomain);
     }
-    else if(strncmp(command, EHLO_CMD, CMD_LEN) == SUCCESS){
+    else if(strncmp(command, EHLO_CMD, CMD_LEN) == SUCCESS && command[CMD_LEN] == SPACE){
         parser->machine->currentState = EHLO_DOMAIN;
         char * ehloDomain = command + CMD_LEN + 1;
         return welcomeEhloDomainTransition(parser, ehloDomain);
@@ -372,8 +372,10 @@ static int vrfyTransition(Parser * parser, char * command) {
 
     char **result = NULL;
     int count;
+    char parsedCmd[256] = {0};
+    for(int i=0; i<256 && command[i] != '\0' && command[i] != '\r'; i++) parsedCmd[i] = command[i];
 
-    int res = vrfy(command, VALID_FILE, &result, &count);
+    int res = vrfy(parsedCmd, VALID_FILE, &result, &count);
     if(res == ERR) {
         parser->status = strdup(VRFY_NOT_FOUND);
         parser->machine->currentState = parser->machine->priorState;
@@ -406,6 +408,7 @@ static int vrfyTransition(Parser * parser, char * command) {
         buff[j++] = '\n';
     }
 
+    buff[j-1] = '\0';
     buff[j] = '\0';
     char ret[1500] = {0};
     sprintf(ret, VRFY_AMBIGUOUS_MSG, buff);
@@ -433,7 +436,7 @@ static int mailFromTransition(Parser * parser, char * command) {
         return ERR;
     }
 
-    char * mailArg = command + FROM_ARG_LEN + 1;
+    char * mailArg = command + FROM_ARG_LEN;
     unsigned long len = strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
     char parsedCmd[256] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
@@ -550,6 +553,8 @@ static int rcptToTransition(Parser * parser, char * command) {
     }
     if(parser->structure != NULL) freeStruct(parser);
 
+    toUpperCmd(command);
+
     if(strncmp(command, TO_ARG, TO_ARG_LEN) != SUCCESS) {
         parser->status = strdup(PARAM_SYNTAX_ERROR_MSG);
         parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
@@ -558,7 +563,7 @@ static int rcptToTransition(Parser * parser, char * command) {
         return ERR;
     }
 
-    char * mailArg = command + TO_ARG_LEN + 1;
+    char * mailArg = command + TO_ARG_LEN;
     unsigned long len = strlen(mailArg) - CLRF_LEN; // Size of the argument plus null (discards \r\n and the character '>')
     char parsedCmd[512] = {0};
     strncpy(parsedCmd, mailArg, len - 1);
