@@ -301,8 +301,6 @@ HandlerErrors handle_client_read (int fd, void * data){
     if(ret == ERR) {
         // Not new info has to be processed, all it is needed is
         // to inform the user the error it has in handle_client_write
-        strcpy(clientData->w_buff, clientData->parser->status);
-        clientData->w_count = strlen(clientData->w_buff);
         Selector_add(selector, fd, SELECTOR_WRITE, - 1, NULL);
         Selector_remove(selector, fd, SELECTOR_READ, false);
         return HANDLER_OK;
