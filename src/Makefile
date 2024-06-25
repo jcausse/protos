@@ -13,13 +13,13 @@ CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_S
 
 SRC_OBJS := main.o sock_types_handlers.o
 LIB_OBJS := lib/hashmap.o lib/linkedlist.o lib/logger.o
-UTILS_OBJS := utils/args.o utils/selector.o utils/sockets.o utils/parser.o utils/vrfy.o utils/stats.o utils/transform/central.o
+UTILS_OBJS := utils/args.o utils/selector.o utils/sockets.o utils/parser.o utils/vrfy.o utils/stats.o utils/central.o
 
 EXEC_NAME := smtpd
 
 .PHONY: all clean
 
-all: smtpd
+all: smtpd utils/slave.exe
 
 ### LINKER
 
@@ -63,6 +63,15 @@ utils/parser.o:
 
 utils/vrfy.o:
 	$(MAKE) -C utils vrfy.o
+
+utils/stats.o:
+	$(MAKE) -C utils stats.o
+
+utils/central.o:
+	$(MAKE) -C utils central.o
+
+utils/slave.exe:
+	$(MAKE) -C utils slave.exe
 
 ### OTHER TARGETS
 
