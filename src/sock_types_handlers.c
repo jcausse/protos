@@ -321,7 +321,6 @@ HandlerErrors handle_client_read (int fd, void * data){
                 strcpy(clientData->w_buff, buff);
                 Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
                 Selector_remove(selector, fd, SELECTOR_READ, false);
-                safe_close(fd);
                 return HANDLER_OK;
             }
             fprintf(clientData->mailFile, MAIL_FROM_STR, clientData->senderMail);
