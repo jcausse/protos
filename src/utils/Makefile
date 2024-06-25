@@ -23,11 +23,11 @@ vrfy.o: vrfy.c vrfy.h
 stats.o: stats.c stats.h
 	$(CC) $(CFLAGS) -c stats.c -o stats.o
 
-central.o: central.c central.h
-	$(CC) $(CFLAGS) -c central.c -o central.o
+central.exe: central.c central.h
+	$(CC) $(CFLAGS) central.c -o central.exe
 
 slave.exe: slave.c
-	$(CC) $(CFLAGS) -c slave.c -o slave.exe
+	$(CC) $(CFLAGS) slave.c -o slave.exe
 
 clean:
 	- rm -f *.o *.gch *.exe
