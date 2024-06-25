@@ -25,11 +25,14 @@
 /* Error messages                                       */
 /********************************************************/
 
+#define MSG_ERR_REGEX_COMPILATION   "Could not compile SMTP parser regexes."
 #define MSG_ERR_SV_SOCKET           "Could not create server socket."
+#define MSG_ERR_MNGR_SOCKET         "Could not create management socket."
+#define MSG_ERR_STATS_CREATION      "Could not initialize statistics."
+#define MSG_ERR_SELECTOR_CREATION   "Could not create Selector."
 #define MSG_ERR_NO_MEM              "Could not allocate memory."
 #define MSG_ERR_SELECT              "select (2) error."
 #define MSG_ERR_UNK_SOCKET_TYPE     "Socket %d reported unknown type %d."
-#define MSG_ERR_REGEX_COMPILATION   "Could not compile SMTP parser regexes."
 
 /********************************************************/
 /* Normal log messages                                  */
@@ -45,6 +48,7 @@
 #define MSG_INFO_REGEX_COMPILED     "Compiled SMTP parser regexes."
 #define MSG_INFO_SV_SOCKET_CREATED  "Listening for SMTP connections on TCP port %d."
 #define MSG_INFO_MNG_SOCKET_CREATED "Listening for management connections on UDP port %d."
+#define MSG_INFO_STATS_CREATED      "Statistics initialized."
 #define MSG_INFO_SELECTOR_CREATED   "Selector started."
 
 /********************************************************/
