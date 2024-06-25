@@ -35,26 +35,34 @@ MANAGER:
 SMTPD:
 
    -d <domain name>: Domain name for the server.
+   
    -s <SMTP port>: Port for the SMTP server.
+   
    -p <management port>: Port for the manager server.
       
    Optional:
    
    -L <log level>: Minimum log level.
+   
    -t <command path>: The transformation command to use.
-   -f <vrfy dir>: The directory where already verified email addresses are stored and where new ones          will be saved.
+   
+   -f <vrfy dir>: The directory where already verified email addresses are stored and where new ones will be saved.
+   
    -v: Prints version information and exits.
+   
    -h: Prints available flags with their pertinent information.
 
 
 MANAGER: 
 
    -i <SMTP server IP>: IP for the SMTP server.
+   
    -p <SMTP server port>: SMTP server port.
 
    Optional:
    
    -v: Prints version information and exits.
+   
    -h: Prints available flags with their pertinent information.
 
 
