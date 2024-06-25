@@ -11,7 +11,7 @@
 #define ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM81
 
 #define PRODUCT_NAME        "smtpd"
-#define PRODUCT_VERSION     "0.1.0"
+#define PRODUCT_VERSION     "0.0.0"
 
 /*************************************************************************/
 /* Include header files                                                  */
@@ -44,7 +44,13 @@
  * 
  * \return  Returns true on success, false otherwise.
  */
-bool parse_args(int argc, char ** argv, SMTPDArgs * const result);
+
+typedef struct {
+    char *server_ip;
+    int port;
+} UDPArgs;
+
+bool parse_args(int argc, char **argv, UDPArgs *const result);
 void usage(const char *progname);
 void version(void);
 short parse_short(const char* str, int radix);

@@ -15,7 +15,7 @@
 
 #define PORT_MAX 65535
 
-#define PRODUCT_VERSION     "0.1.0"
+#define PRODUCT_VERSION     "0.0.0"
 
 #define ORGANIZATION        "ITBA, Protocolos de Comunicacion"
 
@@ -49,79 +49,58 @@ static const char * team_members_ids[] ={
     #undef XX
 };
 
-// TODO ESTO SIRVE?????
-/**
- * \typedef     Return values
- */
-typedef enum {
-    ARGS_OK                 = 0,    // No error
-    ARGS_MISSING            = 1,    // Missing required parameter
-    ARGS_TYPE_MISMATCH      = 2,    // Type mismatch for parameter that requires a type
-    ARGS_TOO_MANY           = 3,    // Too many arguments for parameter
-    ARGS_TOO_FEW            = 4,    // Too few arguments for parameter
-} ArgsErrors;
 
 /*************************************************************************/
 /* Public functions                                                      */
 /*************************************************************************/
 
-bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+
+
+
+
+
+bool parse_args(int argc, char **argv, UDPArgs *const result) {
     int c;
-    if (argc < 5) {
-        int option_index = 0;
-        static struct option long_options[] = { { 0, 0, 0, 0 } };
-        c = getopt_long(argc, argv, "hi:p:v", long_options, &option_index);
-        switch (c) {
-            case 'h':
-                usage(argv[0]);
-                break;
-            case 'v':
-                version();
-                exit(0);
-                break;
-            default:
-                usage(argv[0]);
-                exit(0);
-        }
-    }
-
-    memset(result, 0, sizeof(SMTPDArgs));
-    result->min_log_level = LOGGER_DEFAULT_MIN_LOG_LEVEL;
-    while (true) {
-        int option_index = 0;
-        static struct option long_options[] = { { 0, 0, 0, 0 } };
-
-        c = getopt_long(argc, argv, "hi:p:v", long_options, &option_index);
-        if (c == -1) {
-            break;
-        }
+    while ((c = getopt(argc, argv, "hi:p:v")) != -1) {
         switch (c) {
             case 'h':
                 usage(argv[0]);
                 break;
             case 'i':
-                //result->smtp_port = parse_short(optarg, 10);
+                result->server_ip = optarg;
                 break;
             case 'p':
-                //result->mngr_port = parse_short(optarg, 10);
+                result->port = atoi(optarg);
                 break;
             case 'v':
+                fprintf(stdout, "Version info\n");
                 version();
-                exit(0);
+                exit(EXIT_SUCCESS);
+                break;
+            case '?':
+                if (optopt == 'i' || optopt == 'p') {
+                    fprintf(stderr, "Option -%c requires an argument.\n", optopt);
+                } else  {
+                    fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+                } 
+                usage(argv[0]);
+                return false;
                 break;
             default:
-                fprintf(stderr, "unknown argument %d.\n", c);
-                exit(1);
+                abort();
+                return false;
         }
     }
 
-    if (optind < argc) {
-        fprintf(stderr, "argument not accepted: ");
-        while (optind < argc) {
-            fprintf(stderr, "%s ", argv[optind++]);
-        }
-        fprintf(stderr, "\n");
-        exit(1);
+    // Ensure mandatory options are set
+    if (!result->server_ip || result->port == 0) {
+        fprintf(stderr, "Error: Missing required arguments.\n");
+        usage(argv[0]);
     }
 
     return true;
@@ -129,23 +108,22 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
 
 
 
-
 /*************************************************************************/
 /* Private functions                                                     */
 /*************************************************************************/
 
+
 void usage(const char *progname) {
     fprintf(stderr,
-        "Usage: %s -d <DOMAIN NAME > -s <SMTP PORT > -p <MANAGEMENT PORT > [OPTION]...\n"
+        "Usage: %s -i <IP ADDRESS> -p <PORT>\n"
         "\n"
-        "   -h                      Print this help message and exit.\n"
-        "   -t   <COMMAND PATH >    What transformation command will be used.\n"
-        "   -f   <VRFY DIR >        Directory where already verified mails are stored and new one will be stored.\n"
-        "   -L   <LOG_LEVEL >       Min log level.\n"
-        "   -v                      Print version information and exit.\n"
+        "   -i <IP ADDRESS>   Server IP address\n"
+        "   -p <PORT>         Server port number\n"
+        "   -h                Print this help message and exit.\n"
+        "   -v                Print version information and exit.\n"
         "\n",
         progname);
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 void version(void) {
