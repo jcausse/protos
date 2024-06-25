@@ -124,11 +124,11 @@ static bool key_equals(const uint16_t key1, const uint16_t key2);
 /*************************************************************************/
 
 Selector Selector_create(SelectorDataCleanupCallback data_free_cb){
-    return Selector_create_timeout(-1, data_free_cb);
+    return Selector_create_timeout(SELECTOR_NO_TIMEOUT, data_free_cb);
 }
 
 Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_free_cb){
-    if (timeout != -1 && timeout < 1){
+    if (timeout != SELECTOR_NO_TIMEOUT && timeout < 1){
         return NULL;
     }
     Selector self = NULL;
@@ -153,15 +153,13 @@ Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_f
         return NULL;
     }
     self->data_free_fn = data_free_cb;
-    if (timeout == -1){
+    if (timeout == SELECTOR_NO_TIMEOUT){
         self->use_timeout = false;
     }
     else{
         self->use_timeout = true;
         self->timeout.tv_sec = timeout;
     }
-    self->read_ready  = NULL;
-    self->write_ready = NULL;
     return self;
 }
 
@@ -334,7 +332,7 @@ SelectorErrors Selector_remove(Selector const self,
         /* Remove the file descriptor data */
         void * data = NULL;
         HashMap_pop(self->fd_data,  fd, &data);
-        if (type != NULL && free_data){
+        if (type != NULL && free_data && self->data_free_fn != NULL){
             self->data_free_fn(data);
         }
     }

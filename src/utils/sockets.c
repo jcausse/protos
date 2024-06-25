@@ -64,8 +64,8 @@ int tcp_connect(const char * restrict ip, uint16_t port, bool ipv6, bool keep_al
 }
 
 bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int * const ipv6_sockfd){
-    int ipv4_fd = -1, ipv6_fd = -1;
-    int optval = 1;                         // Value used for socket option SO_REUSEADDR
+    int ipv4_fd = -1, ipv6_fd = -1, flags;
+    const int optval = 1;                   // Value used for socket option SO_REUSEADDR
     struct linger linger_optval = {1, 0};   // Value used for socket option SO_LINGER
 
     TRY{
@@ -89,6 +89,10 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
         /* Listen on IPv4 socket */
         THROW_ON_ERR(listen(ipv4_fd, backlog));
 
+        /* Set IPv4 socket to non-blocking mode */
+        THROW_ON_ERR(flags = fcntl(ipv4_fd, F_GETFL, 0));
+        THROW_ON_ERR(fcntl(ipv4_fd, F_SETFL, flags | O_NONBLOCK));
+
         /******************** IP v6 ********************/
 
         /* Create IPv6 socket */
@@ -98,6 +102,9 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
         THROW_ON_ERR(setsockopt(ipv6_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)));
         THROW_ON_ERR(setsockopt(ipv6_fd, SOL_SOCKET, SO_LINGER, &linger_optval, sizeof(linger_optval)));
 
+        /* Disable dual stack to avoid conflict with IPv4 socket */
+        THROW_ON_ERR(setsockopt(ipv6_fd, IPPROTO_IPV6, IPV6_V6ONLY, &optval, sizeof(optval)));
+
         /* Bind IPv6 socket */
         struct sockaddr_in6 addr6;
         memset(&addr6, 0, sizeof(addr6));
@@ -105,6 +112,10 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
         addr6.sin6_addr = in6addr_any;
         addr6.sin6_port = htons(port);
         THROW_ON_ERR(bind(ipv6_fd, (struct sockaddr *)&addr6, sizeof(addr6)));
+
+        /* Set IPv6 socket to non-blocking mode */
+        THROW_ON_ERR(flags = fcntl(ipv6_fd, F_GETFL, 0));
+        THROW_ON_ERR(fcntl(ipv6_fd, F_SETFL, flags | O_NONBLOCK));
 
         /* Listen on IPv6 socket */
         THROW_ON_ERR(listen(ipv6_fd, backlog));
@@ -123,6 +134,38 @@ bool tcp_serve(uint16_t port, unsigned int backlog, int * const ipv4_sockfd, int
     /* Assign socket file descriptors to output parameters and return */
     *ipv4_sockfd = ipv4_fd;
     *ipv6_sockfd = ipv6_fd;
+    return true;
+}
+
+bool udp_serve(uint16_t port, int * sockfd){
+    int fd;
+
+    /* Create socket */
+    if ((fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+        return false;
+    }
+
+    /* Allow dual stack (IPv4 and IPv6) */
+    int opt = 0;
+    if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt)) < 0) {
+        close(fd);
+        return false;
+    }
+
+    /* Create and setup address structure */
+    struct sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin6_family = AF_INET6;
+    addr.sin6_addr = in6addr_any;
+    addr.sin6_port = htons(port);
+
+    /* Bind the socket to the specified port */
+    if (bind(fd, (const struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        close(fd);
+        return false;
+    }
+
+    * sockfd = fd;
     return true;
 }
 
