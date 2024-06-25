@@ -6,45 +6,10 @@
 #include <inttypes.h>      // Integer types and formatting macros
 #include <sys/socket.h>    // Main sockets library
 
+#include "manager.h"       // Protocol definitions
+
 #define BUF_SIZE 1024      // Buffer size for input
 
-// Protocol definitions
-#define PROTOCOL_SIGNATURE_1 0xFF  // First byte of protocol signature
-#define PROTOCOL_SIGNATURE_2 0xFE  // Second byte of protocol signature
-
-/*
-
-+----+------------+--------------+------------+-----------------+-----------------+
-|SIG1| SIG2       | VERSION      | IDENTIFIER | AUTHENTICATION  | COMMAND         |
-|    |            |              |            | (8 bytes)       |                 |
-+----+------------+--------------+------------+-----------------+-----------------+
-| 1  | 1          | 1            | 2          | 8               | 1               |
-+----+------------+--------------+------------+-----------------+-----------------+
-
-
-*/
-
-// Possible commands
-enum Command {
-    CMD_CONEX_HISTORICAS = 0x00,         // Historical connections count command
-    CMD_CONEX_CONCURRENTES = 0x01,       // Concurrent connections count command
-    CMD_BYTES_TRANSFERIDOS = 0x02,       // Bytes transferred count command
-    CMD_ESTADO_TRANSFORMACIONES = 0x03,  // Check transformations status command
-    CMD_TRANSFORMACIONES_ON = 0x04,      // Enable transformations command
-    CMD_TRANSFORMACIONES_OFF = 0x05,     // Disable transformations command
-    CMD_VERIFY_ON = 0x06,                // Enable verify command
-    CMD_VERIFY_OFF = 0x07                // Disable verify command
-};
-
-// Possible responses
-enum Status {
-    STATUS_SUCCESS = 0x00,                  // Success status
-    STATUS_AUTH_FAILED = 0x01,              // Authentication failure status
-    STATUS_INVALID_VERSION = 0x02,          // Invalid version status
-    STATUS_INVALID_COMMAND = 0x03,          // Invalid command status
-    STATUS_INVALID_REQUEST_LENGTH = 0x04,   // Invalid request length status
-    STATUS_UNEXPECTED_ERROR = 0x05          // Unexpected error status
-};
 
 // Structure for the request
 struct Request {
@@ -66,9 +31,9 @@ struct Response {
 };
 
 // Function prototypes
-void send_request(int sockfd, const struct sockaddr *addr, socklen_t addrlen, struct Request *req);
-void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrlen, struct Response *res);
-void print_menu();
+static void send_request(int sockfd, const struct sockaddr *addr, socklen_t addrlen, struct Request *req);
+static void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrlen, struct Response *res);
+static void print_menu();
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
@@ -151,7 +116,7 @@ int main(int argc, char *argv[]) {
 }
 
 // Function to send request to the server
-void send_request(int sockfd, const struct sockaddr *addr, socklen_t addrlen, struct Request *req) {
+static void send_request(int sockfd, const struct sockaddr *addr, socklen_t addrlen, struct Request *req) {
     uint8_t buffer[14];  // Buffer for the request
     buffer[0] = req->signature[0];
     buffer[1] = req->signature[1];
@@ -169,7 +134,7 @@ void send_request(int sockfd, const struct sockaddr *addr, socklen_t addrlen, st
 }
 
 // Function to receive response from the server
-void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrlen, struct Response *res) {
+static void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrlen, struct Response *res) {
     uint8_t buffer[15];  // Buffer for the response
     int n = recvfrom(sockfd, buffer, sizeof(buffer), 0, addr, addrlen);
 
@@ -196,7 +161,7 @@ void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrlen, str
 }
 
 // Function to print the command menu
-void print_menu() {
+static void print_menu() {
     printf("\nCommand Menu:\n");
     printf("0. Number of historical connections\n");
     printf("1. Number of concurrent connections\n");
