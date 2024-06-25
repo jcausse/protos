@@ -403,8 +403,8 @@ HandlerErrors handle_manager_read (int fd, void * data){
 
     /* Local variables */
     uint8_t buffer[MANAGER_READ_BUFF_SIZE];
-    struct sockaddr_in manager_addr;
-    socklen_t manager_addr_len = sizeof(manager_addr);
+    // struct sockaddr_in manager_addr;
+    // socklen_t manager_addr_len = sizeof(manager_addr);
     ssize_t read_bytes;
 
     /* Attempt to read from socket */
@@ -430,7 +430,7 @@ HandlerErrors handle_manager_read (int fd, void * data){
         LOG_VERBOSE(" Manager sent an invalid command.");
         return HANDLER_NO_OP;
     }
-
+    LOG_VERBOSE("DETECTED %d\n", current_manager_cmd = cmd);
 
     Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_READ, false);
@@ -554,12 +554,14 @@ HandlerErrors handle_manager_write(int fd, void *data) {
     sendto(
         fd,
         response,
-        RESPONSE_SIZE * sizeof(response[0]),
+        RESPONSE_SIZE,
         MSG_DONTWAIT,
         (struct sockaddr *) &manager_addr,
         manager_addr_len
     );
-
+    LOG_VERBOSE("%d", manager_addr_len);
+    LOG_VERBOSE("cmd = %d", current_manager_cmd);
+    
     Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_WRITE, false);
 
