@@ -395,6 +395,9 @@ HandlerErrors handle_client_write (int fd, void * data){
     }
 
     LOG_DEBUG("status: %s", clientData->parser->status);
+
+    if(clientData->parser->status == NULL) return HANDLER_OK;
+
     ssize_t bytes = send(fd, clientData->parser->status, strlen(clientData->parser->status), MSG_DONTWAIT);
     if(bytes == CLOSED) {
         Selector_remove(selector, fd, SELECTOR_READ_WRITE, true);
@@ -405,8 +408,10 @@ HandlerErrors handle_client_write (int fd, void * data){
         return HANDLER_OK;
     }
 
+    free(clientData->parser->status);
+
     // Clear buffer
-    clientData->w_count = clearBuff(bytes, clientData->w_buff);
+    //clientData->w_count = clearBuff(bytes, clientData->w_buff);
     return HANDLER_OK;
 }
 
@@ -501,6 +506,7 @@ HandlerErrors handle_manager_write(int fd, void *data) {
 /***********************************************************************************************/
 
 static int clearBuff(int offset, char * buff) {
+    LOG_DEBUG("beforeClear: %s", buff);
     int i = 0;
     while(offset < WRITE_BUFF_SIZE && buff[offset] != '\0') {
         buff[i] = buff[offset];
@@ -508,6 +514,7 @@ static int clearBuff(int offset, char * buff) {
         i++;
         offset++;
     }
+    LOG_DEBUG("afterClear: %s", buff);
     while(i < offset) buff[i] = '\0';
     return strlen(buff);
 }
