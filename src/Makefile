@@ -10,22 +10,33 @@
 # -D_POSIX_C_SOURCE=200112L 	: Posix version
 
 CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -I ./lib -I ./utils -D __USE_DEBUG_LOGS__ -g
-LIBS := lib/hashmap.o lib/linkedlist.o lib/logger.o
-UTILS := utils/args.o utils/selector.o utils/sockets.o utils/parser.o utils/vrfy.o utils/transform/transform.o
+
 SRC_OBJS := main.o sock_types_handlers.o
+LIB_OBJS := lib/hashmap.o lib/linkedlist.o lib/logger.o
+UTILS_OBJS := utils/args.o utils/selector.o utils/sockets.o utils/parser.o utils/vrfy.o utils/transform/transform.o
+
+EXEC_NAME := smtpd
 
 .PHONY: all clean
 
 all: smtpd
 
-smtpd: $(SRC_OBJS) $(UTILS) $(LIBS)
-	$(CC) $(CFLAGS) $(SRC_OBJS) $(UTILS) $(LIBS) -o smtpd
+### LINKER
+
+smtpd: $(SRC_OBJS) $(UTILS_OBJS) $(LIB_OBJS)
+	$(CC) $(CFLAGS) $(SRC_OBJS) $(UTILS_OBJS) $(LIB_OBJS) -o $(EXEC_NAME)
+
+### MAIN SOURCE
 
 main.o: main.c messages.h
 	$(CC) $(CFLAGS) -c main.c -o main.o
 
-sock_types_handlers.o: sock_types_handlers.c sock_types_handlers.h
+### HANDLERS
+
+sock_types_handlers.o: sock_types_handlers.c sock_types_handlers.h messages.h
 	$(CC) $(CFLAGS) -c sock_types_handlers.c -o sock_types_handlers.o
+
+### LIBRARIES
 
 lib/hashmap.o: 
 	$(MAKE) -C lib hashmap.o
@@ -35,6 +46,8 @@ lib/linkedlist.o:
 
 lib/logger.o: 
 	$(MAKE) -C lib logger.o
+
+### UTILITIES
 
 utils/args.o:
 	$(MAKE) -C utils args.o
@@ -49,7 +62,9 @@ utils/parser.o:
 	$(MAKE) -C utils parser.o
 
 utils/vrfy.o:
-	$(MAKE) -C utils vrfy.o 
+	$(MAKE) -C utils vrfy.o
+
+### OTHER TARGETS
 
 clean:
 	- rm -f smtpd $(SRC_OBJS)
