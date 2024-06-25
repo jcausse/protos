@@ -16,6 +16,7 @@
 #include <stddef.h>                 // size_t
 #include "../manager/manager.h"     // Manager protocol definitions
 
+
 /***********************************************************************/
 
 /**

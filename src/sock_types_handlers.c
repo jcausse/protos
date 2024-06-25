@@ -7,7 +7,7 @@
  */
 
 #include "sock_types_handlers.h"
-
+#include "manager/manager.h"
 /***********************************************************************************************/
 /* Extern global variables                                                                     */
 /***********************************************************************************************/
@@ -192,8 +192,51 @@ HandlerErrors handle_manager_read (int fd, void * data){
         &addr_len
     );
 
-    /* Parse read message */
+    // Parse read message
+    MngrCommand cmd;
+    if (!manager_parse(buffer, (size_t)read, &cmd)) {
+        fprintf(stderr, "Error parsing manager command\n");
+        return -1; //handle error
+    }
 
+    // Process the command
+    switch (cmd) {
+        case CMD_CONEX_HISTORICAS:
+            // Handle historical connections count command
+          
+            break;
+        case CMD_CONEX_CONCURRENTES:
+            // Handle concurrent connections count command
+  
+            break;
+        case CMD_BYTES_TRANSFERIDOS:
+            // Handle bytes transferred count command
+    
+            break;
+        case CMD_ESTADO_TRANSFORMACIONES:
+            // Handle check transformations status command
+      
+            break;
+        case CMD_TRANSFORMACIONES_ON:
+            // Handle enable transformations command
+       
+            break;
+        case CMD_TRANSFORMACIONES_OFF:
+            // Handle disable transformations command
+      
+            break;
+        case CMD_VERIFY_ON:
+            // Handle enable verify command
+  
+            break;
+        case CMD_VERIFY_OFF:
+            // Handle disable verify command
+   
+            break;
+        default:
+            fprintf(stderr, "Unsupported command received: %d\n", cmd);
+            return -1; //handle error
+    }
 
     return HANDLER_OK;
 }
@@ -214,11 +257,105 @@ HandlerErrors handle_client_write (int fd, void * data){
 /**
  * \todo
  */
-HandlerErrors handle_manager_write (int fd, void * data){
-    (void) fd;
-    (void) data;
+
+#define RESPONSE_SIZE 15
+// Example of global variables
+int historic_connections = 1000;
+int current_connections = 5;
+int bytes_transferred = 123456;
+int verification = 0;
+char transformation_program[256] = "";
+// Helper function to prepare response based on command
+static void prepare_response(uint8_t response[RESPONSE_SIZE], uint16_t identifier, uint8_t status, uint64_t data, uint8_t booleano) {
+    response[0] = PROTOCOL_SIGNATURE_1;
+    response[1] = PROTOCOL_SIGNATURE_2;
+    response[2] = PROTOCOL_VERSION;
+    response[3] = (identifier >> 8) & 0xFF; // High byte of identifier
+    response[4] = identifier & 0xFF;        // Low byte of identifier
+    response[5] = status;
+    memcpy(response + 6, &data, sizeof(uint64_t));
+    response[14] = booleano;
+}
+
+HandlerErrors handle_manager_write(int fd, void *data) {
+    if (data == NULL) {
+        return -1;  // Handle error: data pointer is NULL
+    }
+
+    uint8_t response[RESPONSE_SIZE] = {0};  // Initialize response buffer with zeros
+    MngrCommand *cmd = (MngrCommand *)data;
+
+    // Set protocol signature and version in the response
+    response[0] = 0xFF;
+    response[1] = 0xFE;
+    response[2] = 0x00;
+
+    // Example identifier (replace with actual identifier logic if needed)
+    uint16_t identifier = 0x1234;
+    response[3] = (identifier >> 8) & 0xFF;  // High byte of identifier
+    response[4] = identifier & 0xFF;         // Low byte of identifier
+
+    switch (*cmd) {
+        case CMD_CONEX_HISTORICAS:
+            response[5] = 0x00;  // Status: Success
+            memcpy(response + 6, &historic_connections, sizeof(uint64_t));
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            break;
+
+        case CMD_CONEX_CONCURRENTES:
+            response[5] = 0x00;  // Status: Success
+            memcpy(response + 6, &current_connections, sizeof(uint64_t));
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            break;
+
+        case CMD_BYTES_TRANSFERIDOS:
+            response[5] = 0x00;  // Status: Success
+            memcpy(response + 6, &bytes_transferred, sizeof(uint64_t));
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            break;
+
+        case CMD_ESTADO_TRANSFORMACIONES:
+            response[5] = 0x00;  // Status: Success
+            response[14] = transformation_program[0] ? 0x01 : 0x00; // Transformation status as boolean
+            break;
+
+        case CMD_TRANSFORMACIONES_ON:
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x01; // Boolean: 1 (TRUE)
+            break;
+
+        case CMD_TRANSFORMACIONES_OFF:
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            break;
+
+        case CMD_VERIFY_ON:
+            verification = 1;
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x01; // Boolean: 1 (TRUE)
+            break;
+
+        case CMD_VERIFY_OFF:
+            verification = 0;
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            break;
+
+        default:
+            response[5] = 0x03;  // Status: Invalid command
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            break;
+    }
+
+    // Send the response
+    ssize_t bytes_written = write(fd, response, RESPONSE_SIZE);
+    if (bytes_written < 0) {
+        return -1; // Error in sending response
+    }
+
     return HANDLER_OK;
 }
+
 
 /***********************************************************************************************/
 /* Private helper definitions                                                                  */

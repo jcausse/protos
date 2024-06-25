@@ -4,7 +4,7 @@
 // Protocol definitions
 #define PROTOCOL_SIGNATURE_1 0xFF  // First byte of protocol signature
 #define PROTOCOL_SIGNATURE_2 0xFE  // Second byte of protocol signature
-
+#define PROTOCOL_VERSION 0x00       // Protocol version
 /*
 
 Request
