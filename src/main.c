@@ -32,6 +32,7 @@
 Logger      logger      = NULL;     // Logger (see src/lib/logger.h)
 Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
 Stats       stats       = NULL;     // Stats (see src/utils/stats.h)
+bool        transform_enabled;
 
 /****************************************************************/
 /* Extern global variables                                      */
@@ -89,18 +90,19 @@ typedef struct{
     int fromSlavePipe[2];
 } SlaveInfo;
 
-SlaveInfo create_transformer(char* command){    
+SlaveInfo create_transformer(char* command){
 
     SlaveInfo slave;
-    
+
     if (pipe(slave.toSlavePipe) == -1 || pipe(slave.fromSlavePipe) == -1) {
         perror("pipe");
         slave.pid = -1;
         return slave;
     }
-    
+
     if ((slave.pid = fork()) == 0) {
             // Código para el proceso hijo (slave)
+        bool        transform_enabled;
         close(slave.toSlavePipe[1]);
         close(slave.fromSlavePipe[0]);
 
@@ -123,7 +125,7 @@ SlaveInfo create_transformer(char* command){
             // Código para el proceso padre
             close(slave.fromSlavePipe[1]);
             close(slave.toSlavePipe[0]);
-        } 
+        }
         return slave;
 }
 
@@ -173,6 +175,7 @@ int main(int argc, char ** argv){
     if(args.trsf_enabled == true){
         central = create_transformer(args.trsf_cmd);
     }
+    transform_enabled = args.trsf_enabled;
 
     if(central.pid == -1){
         perror("Transformation central failure");
