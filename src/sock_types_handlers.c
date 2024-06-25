@@ -114,6 +114,8 @@ HandlerErrors handle_server4 (int fd, void * _){
             data->parser = initParser(DOMAIN);
             data->receiverMails = (char **) malloc(sizeof(char *));
             data->receiverMailsAmount = 0;
+            data->r_count = 0;
+            data->w_count = 0;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
@@ -178,6 +180,8 @@ HandlerErrors handle_server6 (int fd, void * _){
             data->parser = initParser(DOMAIN);
             data->receiverMails = (char **) malloc(sizeof(char *));
             data->receiverMailsAmount = 0;
+            data->r_count = 0;
+            data->w_count = 0;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
