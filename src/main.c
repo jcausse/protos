@@ -38,6 +38,7 @@ Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
 Stats       stats       = NULL;     // Stats (see src/utils/stats.h)
 
 bool        transform_enabled = false;
+char *      domain      = NULL;
 
 /****************************************************************/
 /* Extern global variables                                      */
@@ -135,6 +136,9 @@ static void smtpd_init(SMTPDArgs * const args){
      */
     mkdir(TMP, FILE_PERMISSIONS);
     mkdir(INBOX, FILE_PERMISSIONS);
+
+    /* Initialization of global command-line arguments */
+    domain = args->domain;
 
     /* Status */
     bool comp_regex = false;
