@@ -24,7 +24,7 @@
 #include <errno.h>          // errno
 #include <getopt.h>         // getopt_long
 #include <stdbool.h>        // bool
-#include "logger.h"         // LogLevels
+#include "../lib/logger.h"  // LogLevels
 
 /*************************************************************************/
 /* Typedefs                                                              */
