@@ -87,6 +87,9 @@ typedef struct{
 /****************************************************************/
 /* Main function                                                */
 /****************************************************************/
+
+// \todo revisar
+#if 0
 SlaveInfo create_transformer(char* command){    
 
     SlaveInfo slave;
@@ -133,33 +136,41 @@ void free_transformer(SlaveInfo slave){
 
 int transform_mail(char* file_name, SlaveInfo central){
     char outputBuffer[MAX_BUFFER_SIZE];
-    ssize_t nbytes   
+    ssize_t nbytes;
     /*Send file to slave*/
     write(central.toSlavePipe[1], file_name, strlen(file_name) + 1);
     /*Get answer from the slave*/
     nbytes = read(central.fromSlavePipe[0], outputBuffer, sizeof(outputBuffer) - 1);
-        if (nbytes > 0) {
-            outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
-            if (strcmp(outputBuffer, SUCCESS) == 0) {
-               return 254;
-            } else {
-                return 255;
-            }
+    if (nbytes > 0) {
+        outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
+        if (strcmp(outputBuffer, SUCCESS) == 0) {
+            return 254;
         } else {
-            perror("read from slave");
-            return EXIT_FAILURE;
+            return 255;
         }
+    } else {
+        perror("read from slave");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
+#endif
 
 int main(int argc, char ** argv){
     /* Parse command-line arguments */
     SMTPDArgs args;
+
+// \todo revisar
+#if 0
     SlaveInfo central;
+#endif
 
     if (! parse_args(argc, argv, &args)){
         return EXIT_FAILURE;
     }
 
+// \todo revisar
+#if 0
     if(args.trsf_enabled == true){
         central = create_transformer(args.trsf_cmd);
     }
@@ -180,7 +191,8 @@ int main(int argc, char ** argv){
         }
     }
     // \todo mover
-    
+#endif
+
     /* Initialize and start server */
     smtpd_init(&args);                  // Initialize SMTPD.
     smtpd_start();                      // Start SMTPD. Only returns on error.

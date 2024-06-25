@@ -135,6 +135,7 @@ HandlerErrors handle_server6 (int fd, void * _){
  * \todo
  */
 HandlerErrors handle_client_read (int fd, void * data){
+    (void) data;
     char buff[512];
     recv(fd, buff, 512, MSG_DONTWAIT);
 
