@@ -358,7 +358,7 @@ HandlerErrors handle_manager_read (int fd, void * data){
     /* Attempt to read from socket */
     read_bytes = recvfrom(fd, buffer, MANAGER_READ_BUFF_SIZE, MSG_DONTWAIT,
                           (struct sockaddr *) &manager_addr, &manager_addr_len);
-
+    
     LOG_VERBOSE("Received %ld bytes from manager", read_bytes);
 
     /* If an error occurred, return */
