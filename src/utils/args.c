@@ -88,9 +88,6 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
             case 'd':
                 result->domain = optarg;
                 break;
-            case 'm':
-                result->mail_directory = optarg;
-                break;
             case 's':
                 result->smtp_port = parse_short(optarg, 10);
                 break;
@@ -151,7 +148,7 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
 
 void usage(const char *progname) {
     fprintf(stderr,
-        "Usage: %s -d <DOMAIN NAME > -m <MAIL DIRECTORY > -s <SMTP PORT > -p <MANAGEMENT PORT > [OPTION]...\n"
+        "Usage: %s -d <DOMAIN NAME > -s <SMTP PORT > -p <MANAGEMENT PORT > [OPTION]...\n"
         "\n"
         "   -t   <COMMAND PATH >    What transformation command will be used.\n"
         "   -f   <VRFY DIR >        Directory where already verified mails are stored and new one will be stored.\n"
