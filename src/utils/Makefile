@@ -1,5 +1,5 @@
 CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -D_GNU_SOURCE -I ../lib/ -g
-UTILS := args.o selector.o sockets.o parser.o vrfy.o
+UTILS := args.o selector.o sockets.o parser.o vrfy.o stats.o
 
 .PHONY: all clean
 
@@ -19,6 +19,9 @@ parser.o: parser.c parser.h
 
 vrfy.o: vrfy.c vrfy.h
 	$(CC) $(CFLAGS) -c vrfy.c -o vrfy.o
+
+stats.o: stats.c stats.h
+	$(CC) $(CFLAGS) -c stats.c -o stats.o
 
 clean:
 	- rm -f *.o *.gch
