@@ -119,7 +119,6 @@ HandlerErrors handle_server4 (int fd, void * _){
             data->w_count = 0;
             data->clientDomain = NULL;
             data->senderMail = NULL;
-            data->receiverMails = NULL;
             data->fileName = NULL;
             data->mailFile = NULL;
 
@@ -190,7 +189,6 @@ HandlerErrors handle_server6 (int fd, void * _){
             data->w_count = 0;
             data->clientDomain = NULL;
             data->senderMail = NULL;
-            data->receiverMails = NULL;
             data->fileName = NULL;
             data->mailFile = NULL;
 
