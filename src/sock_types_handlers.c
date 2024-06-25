@@ -372,8 +372,8 @@ HandlerErrors handle_client_read (int fd, void * data){
                         domain[j] = clientData->receiverMails[i][j];
                         j++;
                     }
-                    fflush(clientData->mailFile);
-                    fclose(clientData->mailFile);
+                    // fflush(clientData->mailFile);
+                    // fclose(clientData->mailFile);
                     int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, fileLoc, domain, userName, filename);
                     
                     if(ret == ERR) {
