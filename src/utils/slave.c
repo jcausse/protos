@@ -9,8 +9,8 @@
 #include <sys/select.h>
 #include <signal.h>
 
-#define INBOX "../inbox/"
-#define TO_TRANSFORM "../auxM/"
+#define INBOX "../../inbox/"
+#define TO_TRANSFORM "../../auxM/"
 #define SUCCESS "254"
 #define FAILURE "255"
 #define MAX_BUFFER_SIZE 1049

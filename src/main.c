@@ -160,19 +160,20 @@ int main(int argc, char ** argv){
         return EXIT_FAILURE;
     }
 
-    if(central.pid == -1){
-        perror("Transformation central failure");
-
-        return EXIT_FAILURE;
-    }
-
     if(args.trsf_enabled == true){
         central = create_transformer(args.trsf_cmd);
     }
 
+    if(central.pid == -1){
+        perror("Transformation central failure");
+        return EXIT_FAILURE;
+    }
+
+    char * file_name;
+    /* FIle names should be like userName-Nameformail.txt*/
     /*If there is a new mail to transform*/
     if(args.trsf_enabled == true){
-        if(transform_mail(args.mail_directory, central) == 255){
+        if(transform_mail(file_name, central) == 255){
             /*Informe user of failure*/
         }else{
             /*Informe user of success*/
