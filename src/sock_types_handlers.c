@@ -176,8 +176,25 @@ HandlerErrors handle_client_read (int fd, void * data){
  * \todo
  */
 HandlerErrors handle_manager_read (int fd, void * data){
-    (void) fd;
-    (void) data;
+    /* Local variables */
+    uint8_t buffer[32];
+    struct sockaddr_storage client_addr;
+    socklen_t addr_len = sizeof(client_addr);
+    ssize_t read;
+
+    /* Attempt to read from socket */
+    read = recvfrom(
+        fd, 
+        buffer, 
+        sizeof(buffer), 
+        MSG_DONTWAIT,
+        (struct sockaddr *) &client_addr, 
+        &addr_len
+    );
+
+    /* Parse read message */
+
+
     return HANDLER_OK;
 }
 

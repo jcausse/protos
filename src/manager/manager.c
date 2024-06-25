@@ -17,7 +17,7 @@ struct Request {
     uint8_t version;        // Protocol version
     uint16_t identifier;    // Request identifier
     uint8_t auth[8];        // Authentication data
-    enum Command command;   // Command
+    MngrCommand command;    // Command
 };
 
 // Structure for the response
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        req.command = (enum Command)command;  // Update command in the request
+        req.command = (MngrCommand)command;  // Update command in the request
 
         // Send request to the server
         send_request(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr), &req);

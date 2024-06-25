@@ -25,7 +25,7 @@ Size (bytes)    | 1  | 1          | 1        | 2            | 1         | 8     
 */
 
 // Possible commands
-enum Command {
+typedef enum {
     CMD_CONEX_HISTORICAS = 0x00,         // Historical connections count command
     CMD_CONEX_CONCURRENTES = 0x01,       // Concurrent connections count command
     CMD_BYTES_TRANSFERIDOS = 0x02,       // Bytes transferred count command
@@ -34,10 +34,10 @@ enum Command {
     CMD_TRANSFORMACIONES_OFF = 0x05,     // Disable transformations command
     CMD_VERIFY_ON = 0x06,                // Enable verify command
     CMD_VERIFY_OFF = 0x07                // Disable verify command
-};
+} MngrCommand;
 
 // Possible responses
-enum Status {
+enum MngrStatus {
     STATUS_SUCCESS = 0x00,                  // Success status
     STATUS_AUTH_FAILED = 0x01,              // Authentication failure status
     STATUS_INVALID_VERSION = 0x02,          // Invalid version status
