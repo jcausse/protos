@@ -117,6 +117,11 @@ HandlerErrors handle_server4 (int fd, void * _){
             data->receiverMailsAmount = 0;
             data->r_count = 0;
             data->w_count = 0;
+            data->clientDomain = NULL;
+            data->senderMail = NULL;
+            data->receiverMails = NULL;
+            data->fileName = NULL;
+            data->mailFile = NULL;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
@@ -183,6 +188,11 @@ HandlerErrors handle_server6 (int fd, void * _){
             data->receiverMailsAmount = 0;
             data->r_count = 0;
             data->w_count = 0;
+            data->clientDomain = NULL;
+            data->senderMail = NULL;
+            data->receiverMails = NULL;
+            data->fileName = NULL;
+            data->mailFile = NULL;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
@@ -341,11 +351,11 @@ HandlerErrors handle_manager_read (int fd, void * data){
 
     /* Attempt to read from socket */
     read = recvfrom(
-        fd, 
-        buffer, 
-        MANAGER_READ_BUFF_SIZE * sizeof(buffer[0]), 
+        fd,
+        buffer,
+        MANAGER_READ_BUFF_SIZE * sizeof(buffer[0]),
         MSG_DONTWAIT,
-        (struct sockaddr *) &manager_addr, 
+        (struct sockaddr *) &manager_addr,
         &manager_addr_len
     );
 
@@ -425,25 +435,25 @@ HandlerErrors handle_manager_write(int fd, void *data) {
 
             Stats_get(stats, STATKEY_CONNS, &statval);
             memcpy(&(response[6]), &(statval), sizeof(uint64_t));
-            
+
             break;
 
         case CMD_CONEX_CONCURRENTES:
             response[5] = 0x00;  // Status: Success
             response[14] = 0x00; // Boolean: 0 (FALSE)
-            
+
             Stats_get(stats, STATKEY_CURR_CONNS, &statval);
             memcpy(&(response[6]), &statval, sizeof(uint64_t));
-            
+
             break;
 
         case CMD_BYTES_TRANSFERIDOS:
             response[5] = 0x00;  // Status: Success
             response[14] = 0x00; // Boolean: 0 (FALSE)
-            
+
             Stats_get(stats, STATKEY_TRANSF_BYTES, &statval);
             memcpy(&(response[6]), &statval, sizeof(uint64_t));
-            
+
             break;
 
         case CMD_ESTADO_TRANSFORMACIONES:
@@ -454,15 +464,15 @@ HandlerErrors handle_manager_write(int fd, void *data) {
         case CMD_TRANSFORMACIONES_ON:
             response[5] = 0x00;  // Status: Success
             response[14] = 0x01; // Boolean: 1 (TRUE)
-            
+
             transform_enabled = true;
-            
+
             break;
 
         case CMD_TRANSFORMACIONES_OFF:
             response[5] = 0x00;  // Status: Success
             response[14] = 0x00; // Boolean: 0 (FALSE)
-            
+
             transform_enabled = false;
 
             break;
