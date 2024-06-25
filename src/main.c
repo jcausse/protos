@@ -18,6 +18,7 @@
 #include "messages.h"
 #include "args.h"
 #include "parser.h"
+#include "stats.h"
 
 #define BACKLOG_SIZE            10
 #define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log" // \todo HARDCODED
@@ -28,6 +29,7 @@
 
 Logger      logger      = NULL;     // Logger (see src/lib/logger.h)
 Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
+Stats       stats       = NULL;     // Stats (see src/utils/stats.h)
 
 /****************************************************************/
 /* Extern global variables                                      */
@@ -65,11 +67,11 @@ static void smtpd_cleanup(int exit_code);
 static void smtpd_abort(void);
 
 /**
- * \brief       Captures SIGINT signal to gracefully stop SMTPD.
+ * \brief       Captures `SIGINT` signal to gracefully stop SMTPD.
  * \details     Attempts to perform a cleanup of the Selector and the Logger.
  * 
  * \param[in] signum    According to the documentation, the handler receives the
- *                      signal number that triggered its call. In this case, SIGINT.
+ *                      signal number that triggered its call. In this case, `SIGINT`.
  */
 void sigint_handler(int sigint);
 
@@ -158,6 +160,10 @@ static void smtpd_init(SMTPDArgs * const args){
         );                              // Expected return: true
         LOG_VERBOSE(MSG_INFO_MNG_SOCKET_CREATED, args->mngr_port);
 
+        /* Create Stats */
+        THROW_IF((stats = Stats_init()) == NULL);
+        LOG_VERBOSE(MSG_INFO_STATS_CREATED);
+
         /* Create Selector */
         THROW_IF((selector = Selector_create(free)) == NULL) // \todo data free fn
         LOG_VERBOSE(MSG_INFO_SELECTOR_CREATED);
@@ -217,6 +223,21 @@ static void smtpd_init(SMTPDArgs * const args){
         /* Could not create server socket */
         else if (sv_fd_4 == -1 || sv_fd_6 == -1){
             LOG_ERR(MSG_ERR_SV_SOCKET);
+        }
+
+        /* Could not create management socket */
+        else if (mngr_fd == -1){
+            LOG_ERR(MSG_ERR_MNGR_SOCKET);
+        }
+
+        /* Could not initialize Stats */
+        else if (stats == NULL){
+            LOG_ERR(MSG_ERR_STATS_CREATION);
+        }
+
+        /* Could not create Selector */
+        else if (selector == NULL){
+            LOG_ERR(MSG_ERR_SELECTOR_CREATION);
         }
 
         /* No memory available for allocation */
