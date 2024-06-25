@@ -137,7 +137,7 @@ static void send_request(int sockfd, const struct sockaddr *addr, socklen_t addr
 // Function to receive response from the server
 static void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrlen, struct Response *res) {
     uint8_t buffer[BUF_SIZE];
-    printf("Pause");
+    printf(" * ");
     int n = recvfrom(sockfd, buffer, sizeof(buffer), 0, addr, addrlen);
 
     printf("Received %d bytes\n", n);
