@@ -12,16 +12,18 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "messages.h"
+#include "sock_types_handlers.h"
+
+#include "lib/exceptions.h"
 #include "lib/logger.h"
+
 #include "utils/selector.h"
 #include "utils/stats.h"
 #include "utils/sockets.h"
-#include "sock_types_handlers.h"
-#include "lib/exceptions.h"
-#include "messages.h"
-#include "utils/args.h"
 #include "utils/parser.h"
 #include "utils/stats.h"
+#include "utils/args.h"
 #include "utils/client_data.h"
 
 #define BACKLOG_SIZE            10

@@ -30,6 +30,7 @@
 typedef enum{
     HANDLER_OK      =  0,       // No error occurred.
     HANDLER_NO_MEM  = -1,       // No memory available.
+    HANDLER_NO_OP   = -2,       // Perform no operation (like HANDLER_OK, but ignoring some kind of error).
 } HandlerErrors;
 
 /**

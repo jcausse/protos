@@ -4,14 +4,18 @@
  *
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
+ * \author      Mindlin, Felipe
+ * \author      Sendot, Francisco
  */
 
 #include "sock_types_handlers.h"
+#include "utils/manager_parser.h"
 #include "utils/client_data.h"
 #include "domain.h"
 #include "utils/sockets.h"
 
 #define CLOSED 0
+#define MANAGER_READ_BUFF_SIZE 32
 #define MAX_DIR_SIZE 512 // Out file system has a 2-level directory to save the mails
 #define REL_TMP "../tmp"
 #define REL_INBOX "../inbox"
@@ -25,12 +29,22 @@
 #define LITERAL_STR "%s"
 
 /***********************************************************************************************/
+/* Global variables                                                                            */
+/***********************************************************************************************/
+
+static MngrCommand              current_manager_cmd;
+static struct sockaddr_storage  manager_addr;
+static socklen_t                manager_addr_len;
+
+/***********************************************************************************************/
 /* Extern global variables                                                                     */
 /***********************************************************************************************/
 
 extern Logger       logger;
 extern Selector     selector;
 extern Stats        stats;
+
+extern bool         transform_enabled;
 
 /***********************************************************************************************/
 /* Read / Write handler pointer arrays                                                         */
@@ -65,6 +79,9 @@ char *strdup(const char *s);
 // the string at the beggining of the array
 static int clearBuff(int offset, char * buff);
 
+#define RESPONSE_SIZE 15
+
+static const char * get_cmd_string(MngrCommand cmd);
 
 /***********************************************************************************************/
 /* Read handler definitions                                                                    */
@@ -307,12 +324,42 @@ HandlerErrors handle_client_read (int fd, void * data){
     return HANDLER_OK;
 }
 
-/**
- * \todo
- */
 HandlerErrors handle_manager_read (int fd, void * data){
-    (void) fd;
     (void) data;
+
+    /* Local variables */
+    uint8_t buffer[MANAGER_READ_BUFF_SIZE];
+    manager_addr_len = sizeof(manager_addr);
+    ssize_t read;
+
+    /* Attempt to read from socket */
+    read = recvfrom(
+        fd, 
+        buffer, 
+        MANAGER_READ_BUFF_SIZE * sizeof(buffer[0]), 
+        MSG_DONTWAIT,
+        (struct sockaddr *) &manager_addr, 
+        &manager_addr_len
+    );
+
+    /* If an error occurred, return */
+    if (read == -1){
+        return HANDLER_NO_OP;
+    }
+
+    /* Parse read message */
+    MngrCommand cmd;
+    if (! manager_parse(buffer, (size_t) read, &cmd)){
+        LOG_VERBOSE(MSG_INFO_BAD_MNGR_COMMAND);
+        return HANDLER_NO_OP;
+    }
+
+    current_manager_cmd = cmd;
+    LOG_VERBOSE(MSG_INFO_MNGR_COMMAND, get_cmd_string(cmd), cmd);
+
+    Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
+    Selector_remove(selector, fd, SELECTOR_READ, false);
+
     return HANDLER_OK;
 }
 
@@ -343,12 +390,89 @@ HandlerErrors handle_client_write (int fd, void * data){
     return HANDLER_OK;
 }
 
-/**
- * \todo
- */
-HandlerErrors handle_manager_write (int fd, void * data){
-    (void) fd;
+HandlerErrors handle_manager_write(int fd, void *data) {
     (void) data;
+
+    uint8_t response[RESPONSE_SIZE] = {0};
+    StatVal statval;
+
+    /* Set protocol signature and version in the response */
+    response[0] = 0xFF;
+    response[1] = 0xFE;
+    response[2] = 0x00;
+
+    /* Set identifier */
+    uint16_t identifier = 0x1234;
+    response[3] = (identifier >> 8) & 0xFF;
+    response[4] = identifier & 0xFF;
+
+    switch (current_manager_cmd) {
+        case CMD_CONEX_HISTORICAS:
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+
+            Stats_get(stats, STATKEY_CONNS, &statval);
+            memcpy(&(response[6]), &(statval), sizeof(uint64_t));
+            
+            break;
+
+        case CMD_CONEX_CONCURRENTES:
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            
+            Stats_get(stats, STATKEY_CURR_CONNS, &statval);
+            memcpy(&(response[6]), &statval, sizeof(uint64_t));
+            
+            break;
+
+        case CMD_BYTES_TRANSFERIDOS:
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            
+            Stats_get(stats, STATKEY_TRANSF_BYTES, &statval);
+            memcpy(&(response[6]), &statval, sizeof(uint64_t));
+            
+            break;
+
+        case CMD_ESTADO_TRANSFORMACIONES:
+            response[5] = 0x00;  // Status: Success
+            response[14] = transform_enabled ? 0x01 : 0x00; // Transformation status as boolean
+            break;
+
+        case CMD_TRANSFORMACIONES_ON:
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x01; // Boolean: 1 (TRUE)
+            
+            transform_enabled = true;
+            
+            break;
+
+        case CMD_TRANSFORMACIONES_OFF:
+            response[5] = 0x00;  // Status: Success
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            
+            transform_enabled = false;
+
+            break;
+
+        default:
+            response[5] = 0x03;  // Status: Invalid command
+            response[14] = 0x00; // Boolean: 0 (FALSE)
+            break;
+    }
+
+    sendto(
+        fd,
+        response,
+        RESPONSE_SIZE * sizeof(response[0]),
+        MSG_DONTWAIT,
+        (struct sockaddr *) &manager_addr,
+        manager_addr_len
+    );
+
+    Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
+    Selector_remove(selector, fd, SELECTOR_WRITE, false);
+
     return HANDLER_OK;
 }
 
@@ -366,4 +490,24 @@ static int clearBuff(int offset, char * buff) {
     }
     while(i < offset) buff[i] = '\0';
     return strlen(buff);
+}
+
+static const char * get_cmd_string(MngrCommand cmd){
+    switch(cmd){
+        case CMD_CONEX_HISTORICAS:
+            return "connections_historic";
+        case CMD_CONEX_CONCURRENTES:
+            return "connections_current";
+        case CMD_BYTES_TRANSFERIDOS:
+            return "transferred_bytes";
+        case CMD_ESTADO_TRANSFORMACIONES:
+            return "transform_state_get";
+        case CMD_TRANSFORMACIONES_ON:
+            return "transform_state_set_true";
+        case CMD_TRANSFORMACIONES_OFF:
+            return "transform_state_set_false";
+        default:
+            break;
+    }
+    return "";
 }
