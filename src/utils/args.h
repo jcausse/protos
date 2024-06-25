@@ -42,6 +42,7 @@ typedef struct {
     char *      vrfy_mails;         // Where to find the verified mails.
     bool        vryf_enabled;       // Enables or disables verification.
     bool        trsf_enabled;       // Enables or disables transformation.
+    char *      log_file;           // File where the logs will be written to.
 
     /**
      * Minimum log level

@@ -67,6 +67,7 @@ typedef enum {
 
 bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
     int c;
+    int flag = 0;
     if (argc < 7) {
         int option_index = 0;
         static struct option long_options[] = { { 0, 0, 0, 0 } };
@@ -102,12 +103,15 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
                 break;
             case 'd':
                 result->domain = optarg;
+                flag ++;
                 break;
             case 's':
                 result->smtp_port = parse_short(optarg, 10);
+                flag ++;
                 break;
             case 'p':
                 result->mngr_port = parse_short(optarg, 10);
+                flag ++;
                 break;
             case 't':
                 result->trsf_cmd = optarg;
@@ -145,6 +149,10 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
                 version();
                 exit(0);
                 break;
+            case 'l':
+                result->log_file = optarg;
+                flag ++;
+                break;
             default:
                 fprintf(stderr, "unknown argument %d.\n", c);
                 exit(1);
@@ -160,6 +168,11 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
         exit(1);
     }
 
+    if(flag < 4){
+        fprintf(stderr, "Error: Missing required arguments.\n");
+        usage(argv[0]);
+    }
+
     return true;
 }
 
@@ -172,7 +185,7 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
 
 void usage(const char *progname) {
     fprintf(stderr,
-        "Usage: %s -d <DOMAIN NAME > -s <SMTP PORT > -p <MANAGEMENT PORT > [OPTION]...\n"
+        "Usage: %s -d <DOMAIN NAME > -s <SMTP PORT > -p <MANAGEMENT PORT > -l <LOG FILE DIRECTTORY > [OPTION]...\n"
         "\n"
         "   -h                      Print this help message and exit.\n"
         "   -t   <COMMAND PATH >    What transformation command will be used.\n"
