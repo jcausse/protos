@@ -791,7 +791,7 @@ int parseCmd(Parser parser, char * command) {
  * about to finish the service with the client, because all the
  * inner parser state will be lost.
  */
-void destroy(Parser parser) {
+void destroyParser(Parser parser) {
     if(parser == NULL) return;
     free(parser->machine);
     if(parser->status != NULL) free(parser->status);

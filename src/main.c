@@ -83,6 +83,13 @@ static void smtpd_abort(void);
  */
 void sigint_handler(int sigint);
 
+/**
+ * \brief       Free all data from a client (a structure `_ClientData_t`).
+ * 
+ * \param[in] arg       A pointer to the data to free (a pointer `ClientData`).
+ */
+void free_client_data(void * arg);
+
 /****************************************************************/
 /* Main function                                                */
 /****************************************************************/
@@ -182,7 +189,7 @@ static void smtpd_init(SMTPDArgs * const args){
         LOG_VERBOSE(MSG_INFO_STATS_CREATED);
 
         /* Create Selector */
-        THROW_IF((selector = Selector_create(free)) == NULL) // \todo data free fn
+        THROW_IF((selector = Selector_create(free_client_data)) == NULL);
         LOG_VERBOSE(MSG_INFO_SELECTOR_CREATED);
 
         /* Add both of the server sockets and the manager socket to the Selector */
@@ -347,6 +354,30 @@ void sigint_handler(int signum){
     (void) signum;                  // Avoids unused parameter warning
     LOG_MSG(MSG_EXIT_SIGINT);       // NULL-safe
     smtpd_cleanup(EXIT_SUCCESS);    // No error occurred
+}
+
+void free_client_data(void * arg){
+    ClientData data = (ClientData) arg;
+    if (data == NULL){
+        return;
+    }
+
+    destroyParser(data->parser);
+
+    FREE_PTR(free, data->clientDomain);
+    FREE_PTR(free, data->senderMail);
+
+    if(data->receiverMails != NULL){
+        for(int i =0; i < data->receiverMailsAmount ;i++){
+            FREE_PTR(free, data->receiverMails[i]);
+        }
+        free(data->receiverMails);
+    }
+
+    FREE_PTR(free, data->fileName);
+    FREE_PTR(free, data->mailFile);
+
+    free(data);
 }
 
 /*
