@@ -38,7 +38,11 @@ Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
 Stats       stats       = NULL;     // Stats (see src/utils/stats.h)
 
 bool        transform_enabled = false;
+char        *transform_cmd    = NULL;
 char *      domain      = NULL;
+
+bool        vrfy_enabled = false;
+char        *vrfy_mails  = NULL;
 
 /****************************************************************/
 /* Extern global variables                                      */
@@ -103,6 +107,7 @@ int main(int argc, char ** argv){
         return EXIT_FAILURE;
     }
 
+
     /* Initialize and start server */
     smtpd_init(&args);                  // Initialize SMTPD.
     smtpd_start();                      // Start SMTPD. Only returns on error.
@@ -139,6 +144,12 @@ static void smtpd_init(SMTPDArgs * const args){
 
     /* Initialization of global command-line arguments */
     domain = args->domain;
+
+    transform_enabled = args->trsf_enabled;
+    transform_cmd = args->trsf_cmd;
+
+    vrfy_enabled = args->vrfy_enabled;
+    vrfy_mails = args->vrfy_mails;
 
     /* Status */
     bool comp_regex = false;

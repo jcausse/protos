@@ -1,7 +1,7 @@
 /**
  * \file        args.h
  * \brief       Parse command-line arguments.
- * 
+ *
  * \author      Causse, Juan Ignacio
  * \author      Codagnone, Juan Francisco
  * \author      De Caro, Guido
@@ -40,13 +40,13 @@ typedef struct {
     uint16_t    mngr_port;          // Port where the management server will be listening to.
     char *      trsf_cmd;           // Command for mail transformation.
     char *      vrfy_mails;         // Where to find the verified mails.
-    bool        vryf_enabled;       // Enables or disables verification.
+    bool        vrfy_enabled;       // Enables or disables verification.
     bool        trsf_enabled;       // Enables or disables transformation.
     char *      log_file;           // File where the logs will be written to.
 
     /**
      * Minimum log level
-     * 
+     *
      * required:    false
      * default:     LOGGER_DEFAULT_MIN_LOG_LEVEL
      * options:     LOGGER_LEVEL_DEBUG, LOGGER_LEVEL_INFO, LOGGER_LEVEL_NORMAL, LOGGER_LEVEL_CRITICAL
@@ -60,11 +60,11 @@ typedef struct {
 
 /**
  * \brief    Parse arguments from command-line.
- * 
+ *
  * \param[in]  argc         Argument count (includes executable name).
  * \param[in]  argv         Argument string array (includes executable name).
  * \param[out] result       Pointer to structure smtpd_args used to save parsed arguments and values.
- * 
+ *
  * \return  Returns true on success, false otherwise.
  */
 bool parse_args(int argc, char ** argv, SMTPDArgs * const result);
