@@ -401,7 +401,7 @@ HandlerErrors handle_manager_read (int fd, void * data){
     ssize_t read_bytes;
 
     /* Attempt to read from socket */
-    read = recvfrom(
+    read_bytes = recvfrom(
         fd,
         buffer,
         MANAGER_READ_BUFF_SIZE * sizeof(buffer[0]),
