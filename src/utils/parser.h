@@ -47,14 +47,15 @@ typedef struct StateMachine * StateMachinePtr;
  * function such as strdup or anything that will garantee that
  * the string will not be lost.
  */
-typedef struct Parser {
+typedef struct _Parser_t {
     StateMachinePtr machine;
     char * status;
     CommandStructure * structure;
     char * serverDom;
     bool transform;
-} Parser;
+} _Parser_t;
 
+typedef struct _Parser_t * Parser;
 /**
  * Initiates the Regex variables, needs to be called only once by the server
  * the first time it inits to set all the regex used in the server to parse
@@ -73,7 +74,7 @@ int compileRegexes(void);
 /**
  * Allocates memory for the parser
  */
-Parser * initParser(const char * serverDomain);
+Parser initParser(const char * serverDomain);
 
 /**
  * Parses a given string, ended in <CLRF> it will change
@@ -100,13 +101,13 @@ Parser * initParser(const char * serverDomain);
  * TERMINAL: The parser has reached a terminal status, should use this
  *           value to know when to close the connection with the client
  */
-int parseCmd(Parser * parser, char * command);
+int parseCmd(Parser parser, char * command);
 
 /**
  * Destroys the parser, this should be done iif the server is
  * about to finish de service with the client, because all the
  * inner parser state will be lost.
  */
-void destroyParser(Parser * parser);
+void destroyParser(Parser parser);
 
 #endif

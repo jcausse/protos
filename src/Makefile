@@ -67,7 +67,7 @@ utils/vrfy.o:
 utils/stats.o:
 	$(MAKE) -C utils stats.o
 
-utils/manager_parser.o
+utils/manager_parser.o:
 	$(MAKE) -C utils manager_parser.o
 
 ### EXECUTABLES

@@ -35,6 +35,8 @@
 *.i*86
 *.x86_64
 *.hex
+smtpd
+manager
 
 # Debug files
 *.dSYM/
@@ -60,4 +62,6 @@ dkms.conf
 **/__pycache__/
 
 build/
+tmp/
+inbox/
 
