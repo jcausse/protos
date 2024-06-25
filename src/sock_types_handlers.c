@@ -106,7 +106,6 @@ HandlerErrors handle_server4 (int fd, void * _){
         /* If there was a connection to be accepted */
         if (sock != -1){
             /* Create client data */
-            // \todo
             ClientData data = malloc(sizeof(_ClientData_t));
             for(int i = 0; i < READ_BUFF_SIZE; i++) {
                 data->r_buff[i] = '\0';
@@ -122,10 +121,12 @@ HandlerErrors handle_server4 (int fd, void * _){
                 sock,
                 SELECTOR_READ_WRITE,
                 SOCK_TYPE_CLIENT,
-                data                   // \todo data???
+                data
             );
             if (ret == SELECTOR_NO_MEMORY){
                 close(sock);
+                FREE_PTR(free, data->receiverMails);
+                FREE_PTR(free, data);
                 return HANDLER_NO_MEM;
             }
             LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sock, SOCK_TYPE_CLIENT);
@@ -169,8 +170,6 @@ HandlerErrors handle_server6 (int fd, void * _){
         /* If there was a connection to be accepted */
         if (sock != -1){
             /* Create client data */
-            // \todo
-
             ClientData data = malloc(sizeof(_ClientData_t));
             for(int i = 0; i < READ_BUFF_SIZE; i++) {
                 data->r_buff[i] = '\0';
@@ -186,10 +185,12 @@ HandlerErrors handle_server6 (int fd, void * _){
                 sock,
                 SELECTOR_READ_WRITE,
                 SOCK_TYPE_CLIENT,
-                data                    // \todo data???
+                data
             );
             if (ret == SELECTOR_NO_MEMORY){
                 close(sock);
+                FREE_PTR(free, data->receiverMails);
+                FREE_PTR(free, data);
                 return HANDLER_NO_MEM;
             }
             LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sock, SOCK_TYPE_CLIENT);
@@ -209,7 +210,7 @@ HandlerErrors handle_server6 (int fd, void * _){
         else if (errno ==  EAGAIN || errno == EWOULDBLOCK){
             done = true;
         }
-    } while (! done);
+    } while (!done);
 
     return HANDLER_OK;
 }

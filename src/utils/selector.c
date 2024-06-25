@@ -210,7 +210,7 @@ SelectorErrors Selector_add(Selector const self,
         SELECTOR_FREE(type_internal);
         return SELECTOR_NO_MEMORY;
     }
-    if (add_write && LinkedList_prepend(self->write_fds, fd) == LINKEDLIST_OK){
+    if (add_write && LinkedList_prepend(self->write_fds, fd) != LINKEDLIST_OK){
         /* 
          * Remove file descriptor from the read_fds LinkedList if an error occurred when
          * adding it to the write_fds LinkedList.
