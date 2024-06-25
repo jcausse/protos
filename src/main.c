@@ -10,16 +10,18 @@
 #include <stdio.h>
 #include <signal.h>
 
+#include "messages.h"
+#include "sock_types_handlers.h"
+
+#include "lib/exceptions.h"
 #include "lib/logger.h"
+
 #include "utils/selector.h"
 #include "utils/stats.h"
 #include "utils/sockets.h"
-#include "sock_types_handlers.h"
-#include "lib/exceptions.h"
-#include "messages.h"
-#include "utils/args.h"
 #include "utils/parser.h"
 #include "utils/stats.h"
+#include "utils/args.h"
 
 #define BACKLOG_SIZE            10
 #define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log" // \todo HARDCODED
