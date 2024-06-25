@@ -126,7 +126,7 @@ HandlerErrors handle_server4 (int fd, void * _){
             SelectorErrors ret = Selector_add(
                 selector,
                 sock,
-                SELECTOR_READ_WRITE,
+                SELECTOR_WRITE,
                 SOCK_TYPE_CLIENT,
                 data
             );
@@ -196,7 +196,7 @@ HandlerErrors handle_server6 (int fd, void * _){
             SelectorErrors ret = Selector_add(
                 selector,
                 sock,
-                SELECTOR_READ_WRITE,
+                SELECTOR_WRITE,
                 SOCK_TYPE_CLIENT,
                 data
             );
@@ -386,8 +386,6 @@ HandlerErrors handle_manager_read (int fd, void * data){
  * \todo
  */
 HandlerErrors handle_client_write (int fd, void * data){
-    LOG_MSG("ACAAAAAAAAAAA");
-
     ClientData clientData = (ClientData) data;
 
     if(clientData->w_count < 1){
@@ -396,7 +394,9 @@ HandlerErrors handle_client_write (int fd, void * data){
 
     LOG_DEBUG("status: %s", clientData->parser->status);
 
-    if(clientData->parser->status == NULL) return HANDLER_OK;
+    if(clientData->parser->status == NULL){
+        return HANDLER_OK;
+    }
 
     ssize_t bytes = send(fd, clientData->parser->status, strlen(clientData->parser->status), MSG_DONTWAIT);
     if(bytes == CLOSED) {
@@ -408,7 +408,8 @@ HandlerErrors handle_client_write (int fd, void * data){
         return HANDLER_OK;
     }
 
-    free(clientData->parser->status);
+    Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
+    Selector_remove(selector, fd, SELECTOR_WRITE, false);
 
     // Clear buffer
     //clientData->w_count = clearBuff(bytes, clientData->w_buff);
