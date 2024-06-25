@@ -397,6 +397,7 @@ HandlerErrors handle_client_read (int fd, void * data){
             else {
                 fprintf(clientData->mailFile, DATA_STR); // The next state will be the data
             }
+            // fclose(clientData->mailFile);
         }
         default: break;
     }

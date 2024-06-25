@@ -592,8 +592,7 @@ static int rcptToOkTransition(Parser parser, char * command) {
     }
     if(parser->structure != NULL) freeStruct(parser);
     toUpperCmd(command);
-
-    if((strncmp(command, DATA_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == '\r'){
+    if((strncmp(command, DATA_CMD, CMD_LEN) == SUCCESS) && !(command[4] != '\n' && command[4] != '\r'  && command[4] != '\0')  ){
         parser->machine->currentState = DATA_INPUT;
         parser->status = strdup(ENTER_DATA_MSG);
         parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
