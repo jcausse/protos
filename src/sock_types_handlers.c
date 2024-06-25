@@ -67,6 +67,9 @@ HandlerErrors handle_server4 (int fd, void * _){
 
         /* If there was a connection to be accepted */
         if (sock != -1){
+            /* Create client data */
+            // \todo
+
             /* Add the accepted connection's fd to the Selector */
             Selector_add(selector, sock, SELECTOR_WRITE, SOCK_TYPE_CLIENT, NULL); // \todo data???
             LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sock, SOCK_TYPE_CLIENT);
@@ -105,6 +108,9 @@ HandlerErrors handle_server6 (int fd, void * _){
 
         /* If there was a connection to be accepted */
         if (sock != -1){
+            /* Create client data */
+            // \todo
+
             /* Add the accepted connection's fd to the Selector */
             Selector_add(selector, sock, SELECTOR_WRITE, SOCK_TYPE_CLIENT, NULL);
             LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sock, SOCK_TYPE_CLIENT);
@@ -129,10 +135,10 @@ HandlerErrors handle_server6 (int fd, void * _){
  * \todo
  */
 HandlerErrors handle_client_read (int fd, void * data){
-    (void) data;
-    char buff[512 + 1] = {0};
+    char buff[512];
     recv(fd, buff, 512, MSG_DONTWAIT);
-    LOG_DEBUG("Client at %d says: %s\n", fd, buff);
+
+
     return HANDLER_OK;
 }
 

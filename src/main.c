@@ -179,6 +179,7 @@ int main(int argc, char ** argv){
             /*Informe user of success*/
         }
     }
+    // \todo mover
     
     /* Initialize and start server */
     smtpd_init(&args);                  // Initialize SMTPD.
