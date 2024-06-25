@@ -167,5 +167,5 @@ static void print_menu() {
     printf("3. Check transformation status\n");
     printf("4. Transformations ON\n");
     printf("5. Transformations OFF\n");
-    printf("Select a command (0-7): ");
+    printf("Select a command (0-5): ");
 }
