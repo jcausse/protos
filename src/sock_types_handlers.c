@@ -255,6 +255,19 @@ HandlerErrors handle_client_read (int fd, void * data){
  */
 HandlerErrors handle_manager_read (int fd, void * data){
     (void) fd;
+    (void) data;
+    return HANDLER_OK;
+}
+
+/***********************************************************************************************/
+/* Write handler definitions                                                                   */
+/***********************************************************************************************/
+
+/**
+ * \todo
+ */
+HandlerErrors handle_client_write (int fd, void * data){
+    (void) fd;
     ClientData clientData = (ClientData) data;
     ssize_t bytes = send(fd, clientData->w_buff, clientData->w_count, MSG_DONTWAIT);
     if(bytes == CLOSED) {
@@ -268,19 +281,6 @@ HandlerErrors handle_manager_read (int fd, void * data){
 
     // Clear buffer
     clientData->w_count = clearBuff(bytes, clientData->w_buff);
-    return HANDLER_OK;
-}
-
-/***********************************************************************************************/
-/* Write handler definitions                                                                   */
-/***********************************************************************************************/
-
-/**
- * \todo
- */
-HandlerErrors handle_client_write (int fd, void * data){
-    (void) fd;
-    (void) data;
     return HANDLER_OK;
 }
 

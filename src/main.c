@@ -32,7 +32,8 @@
 Logger      logger      = NULL;     // Logger (see src/lib/logger.h)
 Selector    selector    = NULL;     // Selector (see src/utils/selector.h)
 Stats       stats       = NULL;     // Stats (see src/utils/stats.h)
-bool        transform_enabled;
+
+bool        transform_enabled = false;
 
 /****************************************************************/
 /* Extern global variables                                      */
