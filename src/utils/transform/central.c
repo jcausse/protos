@@ -17,7 +17,8 @@ SlaveInfo create_slave(char* command){
     
     if (pipe(slave.toSlavePipe) == -1 || pipe(slave.fromSlavePipe) == -1) {
         perror("pipe");
-        return FAILURE;
+        slave.pid = -1;
+        return slave;
     }
     
     if ((slave.pid = fork()) == 0) {
@@ -32,10 +33,14 @@ SlaveInfo create_slave(char* command){
         execve(SLAVE_NAME,args, NULL);
 
         perror("execve");
-        return FAILURE;
+        slave.pid = -1;
+        return slave;
+
         } else if (slave.pid == -1) {
         perror("fork");
-        return FAILURE;
+        slave.pid = -1;
+        return slave;
+
         }else {
             // Código para el proceso padre
             close(slave.fromSlavePipe[1]);
@@ -44,7 +49,7 @@ SlaveInfo create_slave(char* command){
         return slave;
     }
 
-void distribute_tasks( char* start_input,char* cmd){
+int distribute_tasks( char* start_input,char* cmd){
 
     char *command = cmd;
     char *initial_input = start_input;
@@ -52,6 +57,10 @@ void distribute_tasks( char* start_input,char* cmd){
     SlaveInfo slaves[MAX_SLAVES];
     for (int i = 0; i < MAX_SLAVES; i++) {
         slaves[i] = create_slave(command);
+        if(slaves[i].pid == -1){
+            perror("create_slave");
+            return 0;
+        }
     }
 
     int current_slave = 0;
@@ -116,4 +125,5 @@ void distribute_tasks( char* start_input,char* cmd){
         int status;
         waitpid(slaves[i].pid, &status, 0);
     }
+    return 1;
 }

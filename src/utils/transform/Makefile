@@ -5,7 +5,7 @@ UTILS := slave.exe central.o
 
 all: $(UTILS)
 
-slave.exe: slave.c args.h
+slave.exe: slave.c
 	$(CC) $(CFLAGS) -c slave.c -o slave.exe
 
 central.o: central.c central.h

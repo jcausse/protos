@@ -42,8 +42,8 @@ SlaveInfo create_slave(char* command);
  * \param[in] inital_input      First file to be transformed.
  * \param[in] command           Transformation command to apply.
  * 
- * \return                      void
+ * \return                      1 if sucess 0 if failure.
  */
-void distribute_tasks( char* initial_input,char* command);
+int distribute_tasks( char* initial_input,char* command);
 
 #endif
