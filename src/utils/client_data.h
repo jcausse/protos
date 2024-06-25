@@ -15,8 +15,7 @@
 #include <stdio.h>
 #include "parser.h"
 
-#define WRITE_BUFF_SIZE 1400
-#define READ_BUFF_SIZE 1400
+#define BUFF_SIZE 1400
 
 #define TMP "./tmp"
 #define INBOX "./inbox"
@@ -25,10 +24,10 @@
 typedef struct _ClientData_t {
     Parser parser;
 
-    char w_buff[WRITE_BUFF_SIZE];
+    char w_buff[BUFF_SIZE];
     size_t w_count;
 
-    char r_buff[WRITE_BUFF_SIZE];
+    char r_buff[BUFF_SIZE];
     size_t r_count;
 
     char * clientDomain;
