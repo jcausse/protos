@@ -50,6 +50,7 @@ SlaveInfo create_slave(char* command){
     }
 
 int main( int argc, char** argv){
+    (void) argc;
 
     char *command = argv[1];
 
@@ -85,7 +86,7 @@ int main( int argc, char** argv){
 
             // Check if the slave has finished its task
             if (strcmp(outputBuffer, SUCCESS) == 0) {
-               write(STDOUT_FILENO, SUCCESS, strlen(SUCCESS) + 1);
+                write(STDOUT_FILENO, SUCCESS, strlen(SUCCESS) + 1);
             } else {
                 write(STDOUT_FILENO,FAILURE,strlen(FAILURE)+1);
             }

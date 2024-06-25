@@ -7,7 +7,7 @@
  */
 
 #include "sock_types_handlers.h"
-#include "manager/manager.h"
+#include "utils/manager_parser.h"
 #include "utils/client_data.h"
 #include "domain.h"
 #include "utils/sockets.h"
@@ -50,10 +50,11 @@ SockWriteHandler write_handlers[] = {
 /* Private helper declarations                                                                 */
 /***********************************************************************************************/
 
-#define RESPONSE_SIZE 15
 // Clears the first offset bytes in the array and reallocates
 // the string at the beggining of the array
 static int clearBuff(int offset, char * buff);
+
+#define RESPONSE_SIZE 15
 
 static void prepare_response(uint8_t response[RESPONSE_SIZE], uint16_t identifier, uint8_t status, uint64_t data, uint8_t booleano);
 
@@ -254,6 +255,8 @@ HandlerErrors handle_client_read (int fd, void * data){
 }
 
 HandlerErrors handle_manager_read (int fd, void * data){
+    (void) data;
+
     /* Local variables */
     uint8_t buffer[32];
     struct sockaddr_storage client_addr;
@@ -436,7 +439,6 @@ HandlerErrors handle_manager_write(int fd, void *data) {
 
     return HANDLER_OK;
 }
-
 
 /***********************************************************************************************/
 /* Private helper definitions                                                                  */

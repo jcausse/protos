@@ -25,7 +25,7 @@ bool manager_parse(const uint8_t *buff, size_t len, MngrCommand *cmd) {
         return false; // Invalid protocol version
     }
 
-    uint16_t identifier = (buff[3] << 8) | buff[4];
+    //uint16_t identifier = (buff[3] << 8) | buff[4];
     // Check identifier if needed for your protocol
 
     uint8_t expected_auth[8] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};

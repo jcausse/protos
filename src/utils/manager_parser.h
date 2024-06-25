@@ -14,6 +14,7 @@
 #include <stdbool.h>                // bool, true, false
 #include <stdint.h>                 // uint8_t, uint16_t
 #include <stddef.h>                 // size_t
+#include <string.h>                 // memcmp()
 #include "../manager/manager.h"     // Manager protocol definitions
 
 
