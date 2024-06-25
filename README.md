@@ -39,6 +39,8 @@ SMTPD:
    -s <SMTP port>: Port for the SMTP server.
    
    -p <management port>: Port for the manager server.
+
+   -l <log file path>: Path for smtpd logging output.
       
    Optional:
    
