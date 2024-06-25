@@ -67,8 +67,6 @@ typedef enum {
 
 bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
     int c;
-    int option_index = 0;
-    static struct option long_options[] = { { 0, 0, 0, 0 } };
     if (argc < 7) {
          int option_index = 0;
         static struct option long_options[] = { { 0, 0, 0, 0 } };
