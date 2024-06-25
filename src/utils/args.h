@@ -49,7 +49,7 @@ typedef struct {
      * 
      * required:    false
      * default:     LOGGER_DEFAULT_MIN_LOG_LEVEL
-     * options:     LOGGER_LEVEL_INFO, LOGGER_LEVEL_NORMAL, LOGGER_LEVEL_CRITICAL
+     * options:     LOGGER_LEVEL_DEBUG, LOGGER_LEVEL_INFO, LOGGER_LEVEL_NORMAL, LOGGER_LEVEL_CRITICAL
      */
     LogLevels   min_log_level;
 } SMTPDArgs;
@@ -68,5 +68,9 @@ typedef struct {
  * \return  Returns true on success, false otherwise.
  */
 bool parse_args(int argc, char ** argv, SMTPDArgs * const result);
+void usage(const char *progname);
+void version(void);
+short parse_short(const char* str, int radix);
+long parse_long(const char* str, int radix);
 
 #endif // ARGS_H_kFlmYm1tW9p5npzDr2opQJ9jM81

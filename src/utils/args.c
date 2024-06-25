@@ -64,22 +64,20 @@ typedef enum {
 /* Public functions                                                      */
 /*************************************************************************/
 
-bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
-
-    if(argc < 9){
+bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
+    if (argc < 9) {
         usage(argv[0]);
     }
+
     memset(result, 0, sizeof(SMTPDArgs));
     result->min_log_level = LOGGER_DEFAULT_MIN_LOG_LEVEL;
-    int arg = 1;
     int c;
-    while(true){
-
-    int option_index = 0;
-    static struct option long_options[] = { { 0,           0,                 0, 0 } };
+    while (true) {
+        int option_index = 0;
+        static struct option long_options[] = { { 0, 0, 0, 0 } };
 
         c = getopt_long(argc, argv, "hd:m:s:p:t:f:L:v", long_options, &option_index);
-        if (c == -1){
+        if (c == -1) {
             break;
         }
 
@@ -97,30 +95,31 @@ bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
                 result->smtp_port = parse_short(optarg, 10);
                 break;
             case 'p':
-                result->mngr_port = parse_short(optarg,10);
+                result->mngr_port = parse_short(optarg, 10);
                 break;
             case 't':
                 result->trsf_cmd = optarg;
                 result->trsf_enabled = true;
                 break;
             case 'f':
-                result->vrfy_mails   = optarg;
+                result->vrfy_mails = optarg;
                 result->vryf_enabled = true;
                 break;
             case 'L':
-                if(optarg == NULL){
+                if (optarg == NULL) {
                     fprintf(stderr, "missing argument for option -L\n");
                     return false;
-                }else if(optarg == 1){
+                } else if (strcmp(optarg, "1") == 0) {
                     result->min_log_level = LOGGER_LEVEL_INFO;
-                }else if(optarg == 2){
+                } else if (strcmp(optarg, "2") == 0) {
                     result->min_log_level = LOGGER_LEVEL_NORMAL;
-                }else if(optarg == 3){
+                } else if (strcmp(optarg, "3") == 0) {
                     result->min_log_level = LOGGER_LEVEL_CRITICAL;
-                }else {
+                } else {
                     fprintf(stderr, "invalid argument for option -L\n");
                     return false;
                 }
+                break;
             case 'v':
                 version();
                 exit(0);
@@ -129,16 +128,18 @@ bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
                 fprintf(stderr, "unknown argument %d.\n", c);
                 exit(1);
         }
-        if (optind < argc) {
-                fprintf(stderr, "argument not accepted: ");
-                while (optind < argc) {
-                    fprintf(stderr, "%s ", argv[optind++]);
-                }
-                fprintf(stderr, "\n");
-                exit(1);
-            }
-    }       
+    }
 
+    if (optind < argc) {
+        fprintf(stderr, "argument not accepted: ");
+        while (optind < argc) {
+            fprintf(stderr, "%s ", argv[optind++]);
+        }
+        fprintf(stderr, "\n");
+        exit(1);
+    }
+
+    return true;
 }
     
 
@@ -148,7 +149,7 @@ bool parse_args(int argc, char ** argv, SMTPDArgs * const result){
 /* Private functions                                                     */
 /*************************************************************************/
 
-static void usage(const char *progname) {
+void usage(const char *progname) {
     fprintf(stderr,
         "Usage: %s -d <DOMAIN NAME > -m <MAIL DIRECTORY > -s <SMTP PORT > -p <MANAGEMENT PORT > [OPTION]...\n"
         "\n"
@@ -161,7 +162,7 @@ static void usage(const char *progname) {
     exit(1);
 }
 
-static void version(void) {
+void version(void) {
     fprintf(stdout, "%s v%s\n", PRODUCT_NAME, PRODUCT_VERSION);
     fprintf(stdout, "%s\n", ORGANIZATION);
 
@@ -172,10 +173,10 @@ static void version(void) {
             team_members_ids[i],
             team_members_last_names[i],
             team_members_first_names[i]
-        )
+        );
     }
 
-    fprintf("Compiled on %s at %s\n", COMPILATION_DATE, COMPILATION_TIME);
+    printf("Compiled on %s at %s\n", COMPILATION_DATE, COMPILATION_TIME);
 }
 
 
@@ -189,7 +190,7 @@ static void version(void) {
 #define STRTOL_MIN_RADIX 2
 #define STRTOL_MAX_RADIX 36
 
-static short parse_short(const char* str, int radix){
+short parse_short(const char* str, int radix){
     long res = parse_long(str, radix);
     if (res > SHRT_MAX || res < SHRT_MIN){
         errno = ERANGE;
@@ -198,16 +199,7 @@ static short parse_short(const char* str, int radix){
     return (short) res;
 }
 
-static int parse_int(const char* str, int radix){
-    long res = parse_long(str, radix);
-    if (res > INT_MAX || res < INT_MIN){
-        errno = ERANGE;
-        return (int) 0;
-    }
-    return (int) res;
-}
-
-static long parse_long(const char* str, int radix){
+long parse_long(const char* str, int radix){
     if (str == NULL || (radix != 0 && (radix < STRTOL_MIN_RADIX || radix > STRTOL_MAX_RADIX))){
         errno = EINVAL;
         return 0L;
@@ -231,3 +223,4 @@ static long parse_long(const char* str, int radix){
 }
 
 /***********************************************************************************************/
+
