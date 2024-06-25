@@ -5,7 +5,7 @@ import argparse
 
 COMPILER: str = 'gcc'
 COMPILER_VERSION_CMD: str = 'gcc -v'
-CFLAGS: str = '-std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L'
+CFLAGS: str = '-std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -D __USE_DEBUG_LOGS__'
 
 VALGRIND: str = 'valgrind'
 VALGRIND_VERSION_CMD: str = 'valgrind --version'
