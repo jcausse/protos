@@ -12,8 +12,6 @@
 #include <sys/select.h>
 #include <signal.h>
 
-#define INBOX "../inbox/"
-#define TO_TRANSFORM "../auxM/"
 #define SUCCESS "254"
 #define FAILURE "255"
 #define MAX_BUFFER_SIZE 1049
@@ -44,6 +42,5 @@ SlaveInfo create_slave(char* command);
  * 
  * \return                      1 if sucess 0 if failure.
  */
-int distribute_tasks( char* initial_input,char* command);
 
 #endif

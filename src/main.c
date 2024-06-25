@@ -22,6 +22,7 @@
 
 #define BACKLOG_SIZE            10
 #define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log" // \todo HARDCODED
+#define MAX_BUFFER_SIZE 1049
 
 /****************************************************************/
 /* Global variables                                             */
@@ -37,6 +38,7 @@ Stats       stats       = NULL;     // Stats (see src/utils/stats.h)
 
 extern SockReadHandler  read_handlers[];
 extern SockWriteHandler write_handlers[];
+
 
 /****************************************************************/
 /* Private function declarations                                */
@@ -75,17 +77,107 @@ static void smtpd_abort(void);
  */
 void sigint_handler(int sigint);
 
+typedef struct{
+    int pid;                    //Process pid
+    int toSlavePipe[2];         //Pipes to send and receive messages to the slave
+    int fromSlavePipe[2];
+} SlaveInfo;
+
 /****************************************************************/
 /* Main function                                                */
 /****************************************************************/
+SlaveInfo create_transformer(char* command){    
+
+    SlaveInfo slave;
+    
+    if (pipe(slave.toSlavePipe) == -1 || pipe(slave.fromSlavePipe) == -1) {
+        perror("pipe");
+        slave.pid = -1;
+        return slave;
+    }
+    
+    if ((slave.pid = fork()) == 0) {
+            // Código para el proceso hijo (slave)
+        close(slave.toSlavePipe[1]);
+        close(slave.fromSlavePipe[0]);
+
+            // Redirecciona las entradas/salidas estándar según sea necesario
+        dup2(slave.toSlavePipe[0], STDIN_FILENO);
+        dup2(slave.fromSlavePipe[1], STDOUT_FILENO);
+        char * args[] = {"./central.exe",command,NULL};
+        execve("./central.exe",args, NULL);
+
+        perror("execve");
+        slave.pid = -1;
+        return slave;
+
+        } else if (slave.pid == -1) {
+        perror("fork");
+        slave.pid = -1;
+        return slave;
+
+        }else {
+            // Código para el proceso padre
+            close(slave.fromSlavePipe[1]);
+            close(slave.toSlavePipe[0]);
+        } 
+        return slave;
+}
+
+void free_transformer(SlaveInfo slave){
+    close(slave.toSlavePipe[0]);
+    close(slave.fromSlavePipe[1]);
+    kill(slave.pid, SIGKILL);
+}
+
+int transform_mail(char* file_name, SlaveInfo central){
+    char outputBuffer[MAX_BUFFER_SIZE];
+    ssize_t nbytes   
+    /*Send file to slave*/
+    write(central.toSlavePipe[1], file_name, strlen(file_name) + 1);
+    /*Get answer from the slave*/
+    nbytes = read(central.fromSlavePipe[0], outputBuffer, sizeof(outputBuffer) - 1);
+        if (nbytes > 0) {
+            outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
+            if (strcmp(outputBuffer, SUCCESS) == 0) {
+               return 254;
+            } else {
+                return 255;
+            }
+        } else {
+            perror("read from slave");
+            return EXIT_FAILURE;
+        }
+}
 
 int main(int argc, char ** argv){
     /* Parse command-line arguments */
     SMTPDArgs args;
+    SlaveInfo central;
+
     if (! parse_args(argc, argv, &args)){
         return EXIT_FAILURE;
     }
 
+    if(central.pid == -1){
+        perror("Transformation central failure");
+
+        return EXIT_FAILURE;
+    }
+
+    if(args.trsf_enabled == true){
+        central = create_transformer(args.trsf_cmd);
+    }
+
+    /*If there is a new mail to transform*/
+    if(args.trsf_enabled == true){
+        if(transform_mail(args.mail_directory, central) == 255){
+            /*Informe user of failure*/
+        }else{
+            /*Informe user of success*/
+        }
+    }
+    
     /* Initialize and start server */
     smtpd_init(&args);                  // Initialize SMTPD.
     smtpd_start();                      // Start SMTPD. Only returns on error.

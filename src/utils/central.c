@@ -49,10 +49,9 @@ SlaveInfo create_slave(char* command){
         return slave;
     }
 
-int distribute_tasks( char* start_input,char* cmd){
+int main( int argc, char** argv){
 
-    char *command = cmd;
-    char *initial_input = start_input;
+    char *command = argv[1];
 
     SlaveInfo slaves[MAX_SLAVES];
     for (int i = 0; i < MAX_SLAVES; i++) {
@@ -64,29 +63,8 @@ int distribute_tasks( char* start_input,char* cmd){
     }
 
     int current_slave = 0;
-
-    // Process the first input file passed as a parameter
-    write(slaves[current_slave].toSlavePipe[1], initial_input, strlen(initial_input) + 1);
-
     char outputBuffer[MAX_BUFFER_SIZE];
     ssize_t nbytes;
-
-    // Read the response from the current slave
-    nbytes = read(slaves[current_slave].fromSlavePipe[0], outputBuffer, sizeof(outputBuffer) - 1);
-    if (nbytes > 0) {
-        outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
-
-        // Check if the slave has finished its task
-        if (strcmp(outputBuffer, SUCCESS) == 0) {
-            write(STDOUT_FILENO, SUCCESS, strlen(SUCCESS) + 1); 
-        } else {
-           write(STDOUT_FILENO,FAILURE,strlen(FAILURE)+1);
-        }
-    } else {
-        perror("read from slave");
-    }
-
-    current_slave = (current_slave + 1) % MAX_SLAVES;
 
     char inputBuffer[MAX_BUFFER_SIZE];
     // Process subsequent input from stdin
