@@ -9,6 +9,8 @@
 
 #include <stdio.h>
 #include <signal.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "lib/logger.h"
 #include "utils/selector.h"
@@ -20,6 +22,7 @@
 #include "utils/args.h"
 #include "utils/parser.h"
 #include "utils/stats.h"
+#include "utils/client_data.h"
 
 #define BACKLOG_SIZE            10
 #define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log" // \todo HARDCODED
@@ -221,6 +224,14 @@ static void smtpd_init(SMTPDArgs * const args){
         .flush_immediately  = true,                 // Disable buffering for real-time log viewing (tail -f)
         .log_prefix         = PRODUCT_NAME " v" PRODUCT_VERSION     // Product info as log prefix
     };
+
+    /**
+     * Directories used to store tmp and persistent mails
+     * It is no necessary to check for error because it will
+     * error iif the directories are already created.
+     */
+    mkdir(TMP, FILE_PERMISSIONS);
+    mkdir(INBOX, FILE_PERMISSIONS);
 
     /* Status */
     bool comp_regex = false;

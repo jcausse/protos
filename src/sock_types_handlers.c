@@ -198,7 +198,6 @@ HandlerErrors handle_client_read (int fd, void * data){
         return HANDLER_OK;
     }
 
-
     char aux[READ_BUFF_SIZE] = {0};
 
     if(clientData->r_count != 0) {
@@ -251,7 +250,14 @@ HandlerErrors handle_client_read (int fd, void * data){
     switch(structure->cmd) {
         case HELO: clientData->clientDomain = strdup(structure->heloDomain); break;
         case EHLO: clientData->clientDomain = strdup(structure->ehloDomain); break;
-        case MAIL_FROM: {
+        case MAIL_FROM: clientData->senderMail = strdup(structure->mailFromStr); break;
+        case RCPT_TO: {
+            char * receiverMails = strdup(structure->rcptToStr);
+            char userName[256] = {0};
+            int i = 0;
+            while(receiverMails[i++] != ':');
+            i++;
+            for(int j = 0; receiverMails[i] != '@' ;i++, j++) userName[j] = receiverMails[j];
 
         }
     }

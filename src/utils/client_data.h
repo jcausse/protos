@@ -18,6 +18,10 @@
 #define WRITE_BUFF_SIZE 1400
 #define READ_BUFF_SIZE 1400
 
+#define TMP "./tmp"
+#define INBOX "./inbox"
+#define FILE_PERMISSIONS 0770
+
 typedef struct _ClientData_t {
     Parser parser;
 
@@ -30,7 +34,7 @@ typedef struct _ClientData_t {
     char * clientDomain;
 
     char * senderMail;
-    char * receiverMail;
+    char * receiverMails;
 
     FILE *mail_file;
 } _ClientData_t;
