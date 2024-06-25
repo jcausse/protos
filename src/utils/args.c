@@ -1,7 +1,7 @@
 /**
  * \file        args.c
  * \brief       Parse command-line arguments.
- * 
+ *
  * \author      Causse, Juan Ignacio
  * \author      Codagnone, Juan Francisco
  * \author      De Caro, Guido
@@ -24,11 +24,12 @@
 
 #define TEAM_NO "3"
 
-#define TEAM_MEMBERS(XX)                                                    \
-    XX("Causse",        "Juan Ignacio",     "61105")                        \
-    XX("De Caro",       "Guido",            "61590")                        \
-    XX("Mindlin",       "Felipe",           "62774")                        \
-    XX("Sendot",        "Francisco",        "62351")                        
+#define TEAM_MEMBERS(XX)                                    \
+    XX("Causse",            "Juan Ignacio",     "61105")    \
+    XX("De Caro",           "Guido",            "61590")    \
+    XX("Mindlin",           "Felipe",           "62774")    \
+    XX("Sendot",            "Francisco",        "62351")    \
+    XX("Garcia Lauberer",   "Federico Inti",    "61374")
 
 static const char * team_members_last_names[] ={
     #define XX(LAST_NAME, FIRST_NAME, ID) LAST_NAME,
@@ -138,7 +139,7 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
 
     return true;
 }
-    
+
 
 
 

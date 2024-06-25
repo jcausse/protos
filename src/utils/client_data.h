@@ -1,7 +1,7 @@
 /**
  * \file        client_data.h
  * \brief       Handlers for all socket types used by the server.
- * 
+ *
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
  * \author      Sendot, Francisco
@@ -10,9 +10,25 @@
 #ifndef __CLIENT_DATA_H__
 #define __CLIENT_DATA_H__
 
-typedef struct _ClientData_t{
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "parser.h"
 
-}_ClientData_t;
+#define WRITE_BUFF_SIZE 1400
+#define READ_BUFF_SIZE 1400
+
+typedef struct _ClientData_t {
+    Parser parser;
+
+    char w_buff[WRITE_BUFF_SIZE];
+    size_t w_count;
+
+    char r_buff[WRITE_BUFF_SIZE];
+    size_t r_count;
+
+    FILE *mail_file;
+} _ClientData_t;
 
 typedef struct _ClientData_t * ClientData;
 
