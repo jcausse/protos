@@ -124,8 +124,8 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        if (command < 0 || command > 5) {
-            printf("Invalid command. Please select a number from 0 to 5.\n");
+        if (command < 0 || command > 2) {
+            printf("Invalid command. Please select a number from 0 to 1.\n");
             continue;
         }
 
