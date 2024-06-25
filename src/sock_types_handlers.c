@@ -526,28 +526,7 @@ HandlerErrors handle_manager_write(int fd, void *data) {
     while(i < offset) buff[i] = '\0';
     return strlen(buff);
 }
-<<<<<<< HEAD
-*/
-static const char * get_cmd_string(MngrCommand cmd){
-    switch(cmd){
-        case CMD_CONEX_HISTORICAS:
-            return "connections_historic";
-        case CMD_CONEX_CONCURRENTES:
-            return "connections_current";
-        case CMD_BYTES_TRANSFERIDOS:
-            return "transferred_bytes";
-        case CMD_ESTADO_TRANSFORMACIONES:
-            return "transform_state_get";
-        case CMD_TRANSFORMACIONES_ON:
-            return "transform_state_set_true";
-        case CMD_TRANSFORMACIONES_OFF:
-            return "transform_state_set_false";
-        default:
-            break;
-    }
-    return "";
-}
-=======
+
 
 // static const char * get_cmd_string(MngrCommand cmd){
 //     switch(cmd){
@@ -567,5 +546,4 @@ static const char * get_cmd_string(MngrCommand cmd){
 //             break;
 //     }
 //     return "";
-// }
->>>>>>> refs/remotes/origin/main
+// }*/
