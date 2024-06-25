@@ -12,8 +12,9 @@
 /* Extern global variables                                                                     */
 /***********************************************************************************************/
 
-extern Logger      logger;
-extern Selector    selector;
+extern Logger       logger;
+extern Selector     selector;
+extern Stats        stats;
 
 /***********************************************************************************************/
 /* Read / Write handler pointer arrays                                                         */
@@ -71,7 +72,17 @@ HandlerErrors handle_server4 (int fd, void * _){
             // \todo
 
             /* Add the accepted connection's fd to the Selector */
-            Selector_add(selector, sock, SELECTOR_WRITE, SOCK_TYPE_CLIENT, NULL); // \todo data???
+            SelectorErrors ret = Selector_add(
+                selector,
+                sock,
+                SELECTOR_WRITE, 
+                SOCK_TYPE_CLIENT, 
+                NULL                    // \todo data???
+            ); 
+            if (ret == SELECTOR_NO_MEMORY){
+                close(sock);
+                return HANDLER_NO_MEM;
+            }
             LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sock, SOCK_TYPE_CLIENT);
 
             /* Create log */
@@ -79,6 +90,10 @@ HandlerErrors handle_server4 (int fd, void * _){
             inet_ntop(AF_INET, &(addr.sin_addr), ip, INET_ADDRSTRLEN);
             uint16_t port = ntohs(addr.sin_port);
             LOG_MSG(MSG_NEW_CLIENT, ip, port);
+
+            /* Increment statistics */
+            Stats_increment(stats, STATKEY_CONNS);
+            Stats_increment(stats, STATKEY_CURR_CONNS);
         }
 
         /* No more connections pending */
@@ -112,7 +127,17 @@ HandlerErrors handle_server6 (int fd, void * _){
             // \todo
 
             /* Add the accepted connection's fd to the Selector */
-            Selector_add(selector, sock, SELECTOR_WRITE, SOCK_TYPE_CLIENT, NULL);
+            SelectorErrors ret = Selector_add(
+                selector, 
+                sock, 
+                SELECTOR_WRITE, 
+                SOCK_TYPE_CLIENT, 
+                NULL                    // \todo data???
+            );
+            if (ret == SELECTOR_NO_MEMORY){
+                close(sock);
+                return HANDLER_NO_MEM;
+            }
             LOG_DEBUG(MSG_DEBUG_SELECTOR_ADD, sock, SOCK_TYPE_CLIENT);
 
             /* Create log */
@@ -120,6 +145,10 @@ HandlerErrors handle_server6 (int fd, void * _){
             inet_ntop(AF_INET6, &(addr.sin6_addr), ip, INET6_ADDRSTRLEN);
             uint16_t port = ntohs(addr.sin6_port);
             LOG_MSG(MSG_NEW_CLIENT, ip, port);
+
+            /* Increment statistics */
+            Stats_increment(stats, STATKEY_CONNS);
+            Stats_increment(stats, STATKEY_CURR_CONNS);
         }
 
         /* No more connections pending */
