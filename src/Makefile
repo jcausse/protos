@@ -15,7 +15,7 @@ SRC_OBJS := main.o sock_types_handlers.o
 LIB_OBJS := lib/hashmap.o lib/linkedlist.o lib/logger.o
 UTILS_OBJS := utils/args.o utils/selector.o utils/sockets.o utils/parser.o utils/vrfy.o utils/stats.o utils/central.o
 
-EXEC_NAME := smtpd
+EXEC_NAME := smtpd.bin
 
 .PHONY: all clean
 
@@ -38,13 +38,13 @@ sock_types_handlers.o: sock_types_handlers.c sock_types_handlers.h messages.h
 
 ### LIBRARIES
 
-lib/hashmap.o: 
+lib/hashmap.o:
 	$(MAKE) -C lib hashmap.o
 
-lib/linkedlist.o: 
+lib/linkedlist.o:
 	$(MAKE) -C lib linkedlist.o
 
-lib/logger.o: 
+lib/logger.o:
 	$(MAKE) -C lib logger.o
 
 ### UTILITIES
