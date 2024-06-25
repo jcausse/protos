@@ -13,6 +13,7 @@
 #include "utils/client_data.h"
 #include "domain.h"
 #include "utils/sockets.h"
+#include "utils/transform.h"
 
 #define CLOSED 0
 #define MANAGER_READ_BUFF_SIZE 32
@@ -44,7 +45,11 @@ extern Logger       logger;
 extern Selector     selector;
 extern Stats        stats;
 
-extern bool         transform_enabled;
+extern bool        transform_enabled;
+extern char        *transform_cmd;
+
+extern bool        vrfy_enabled;
+extern char        *vrfy_mails;
 
 /***********************************************************************************************/
 /* Read / Write handler pointer arrays                                                         */
@@ -263,6 +268,7 @@ HandlerErrors handle_client_read (int fd, void * data){
         // useful and return a closing message to the client
         // DO NOT CLOSE THE SELECTOR_WRITE UNTIL THE CLOSING CONNECTION
         // MESSAGE IS SENT
+        clientData->parser->structure->cmd = QUIT;
         strcpy(clientData->w_buff, clientData->parser->status);
         Selector_remove(selector, fd, SELECTOR_READ, false);
         safe_close(fd);
@@ -291,7 +297,7 @@ HandlerErrors handle_client_read (int fd, void * data){
 
             time_t t = time(NULL);
             struct tm tm = *localtime(&t);
-            sprintf(fileName, "%s/From:%s-%d-%02d-%02d %02d:%02d:%02d", REL_TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+            sprintf(fileName, "%s/From:%s-%d-%02d-%02d %02d:%02d:%02d", TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
             clientData->mailFile = fopen(fileName, RW_FOPEN);
             if(clientData->mailFile == NULL) {
                 // Server error, should close the connection
@@ -308,8 +314,48 @@ HandlerErrors handle_client_read (int fd, void * data){
             break;
         }
         case DATA: {
-            if(strcmp(structure->dataStr, DOT_CLRF) == SUCCESS) {
-                // Handle transform
+            if(strncmp(structure->dataStr, DOT_CLRF, strlen(DOT_CLRF)) == SUCCESS) {
+                fprintf(clientData->mailFile, LITERAL_STR,structure->dataStr);
+
+                time_t t = time(NULL);
+                struct tm tm = *localtime(&t);
+
+                char fileLoc[MAX_DIR_SIZE] = {0};
+                char filename[MAX_DIR_SIZE] = {0};
+                sprintf(fileLoc, "%s/From:%s|%d-%02d-%02d %02d:%02d:%02d", TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+                sprintf(filename, "From:%s|%d-%02d-%02d %02d:%02d:%02d", clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+                char userName[MAX_DIR_SIZE/2] = {0};
+                char domain[MAX_DIR_SIZE/2] = {0};
+                for(int i = 0; i < clientData->receiverMailsAmount ;i++){
+                    int receiverLen = strlen(clientData->receiverMails[i]);
+                    int j = 0;
+                    while(j < receiverLen && clientData->receiverMails[i][j] != '@'){
+                        userName[j] = clientData->receiverMails[i][j];
+                        j++;
+                    }
+                    j++;
+                    while(j < receiverLen && clientData->receiverMails[i][j] != '\r' && clientData->receiverMails[i][j] != '\n' ){
+                        domain[j] = clientData->receiverMails[i][j];
+                        j++;
+                    }
+                    int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, fileLoc, domain, userName, filename);
+                    if(ret == ERR) {
+                        if(clientData->mailFile == NULL) {
+                            // Server error, should close the connection
+                            char buff[WRITE_BUFF_SIZE] = {0};
+                            sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                            strcpy(clientData->w_buff, buff);
+                            Selector_remove(selector, fd, SELECTOR_READ, false);
+                            safe_close(fd);
+                            return HANDLER_OK;
+                        }
+                    }
+                    for(int k = 0; k < MAX_DIR_SIZE/2 ;k++){
+                        userName[k] = '\0';
+                        domain[k] = '\0';
+                    }
+                }
             }
             else{
                 fprintf(clientData->mailFile, LITERAL_STR,structure->dataStr);
@@ -334,11 +380,11 @@ HandlerErrors handle_manager_read (int fd, void * data){
 
     /* Attempt to read from socket */
     read = recvfrom(
-        fd, 
-        buffer, 
-        MANAGER_READ_BUFF_SIZE * sizeof(buffer[0]), 
+        fd,
+        buffer,
+        MANAGER_READ_BUFF_SIZE * sizeof(buffer[0]),
         MSG_DONTWAIT,
-        (struct sockaddr *) &manager_addr, 
+        (struct sockaddr *) &manager_addr,
         &manager_addr_len
     );
 
@@ -376,7 +422,7 @@ HandlerErrors handle_client_write (int fd, void * data){
 
     if(clientData->w_count < 1) return HANDLER_OK;
     ssize_t bytes = send(fd, clientData->w_buff, clientData->w_count, MSG_DONTWAIT);
-    if(bytes == CLOSED) {
+    if(bytes == CLOSED || clientData->parser->structure->cmd == QUIT) {
         Selector_remove(selector, fd, SELECTOR_READ_WRITE, true);
         safe_close(fd);
         return HANDLER_OK;
@@ -413,25 +459,25 @@ HandlerErrors handle_manager_write(int fd, void *data) {
 
             Stats_get(stats, STATKEY_CONNS, &statval);
             memcpy(&(response[6]), &(statval), sizeof(uint64_t));
-            
+
             break;
 
         case CMD_CONEX_CONCURRENTES:
             response[5] = 0x00;  // Status: Success
             response[14] = 0x00; // Boolean: 0 (FALSE)
-            
+
             Stats_get(stats, STATKEY_CURR_CONNS, &statval);
             memcpy(&(response[6]), &statval, sizeof(uint64_t));
-            
+
             break;
 
         case CMD_BYTES_TRANSFERIDOS:
             response[5] = 0x00;  // Status: Success
             response[14] = 0x00; // Boolean: 0 (FALSE)
-            
+
             Stats_get(stats, STATKEY_TRANSF_BYTES, &statval);
             memcpy(&(response[6]), &statval, sizeof(uint64_t));
-            
+
             break;
 
         case CMD_ESTADO_TRANSFORMACIONES:
@@ -442,15 +488,15 @@ HandlerErrors handle_manager_write(int fd, void *data) {
         case CMD_TRANSFORMACIONES_ON:
             response[5] = 0x00;  // Status: Success
             response[14] = 0x01; // Boolean: 1 (TRUE)
-            
+
             transform_enabled = true;
-            
+
             break;
 
         case CMD_TRANSFORMACIONES_OFF:
             response[5] = 0x00;  // Status: Success
             response[14] = 0x00; // Boolean: 0 (FALSE)
-            
+
             transform_enabled = false;
 
             break;

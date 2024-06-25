@@ -115,19 +115,19 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
                 break;
             case 'f':
                 result->vrfy_mails = optarg;
-                result->vryf_enabled = true;
+                result->vrfy_enabled = true;
                 break;
             case 'L':
                 if (optarg == NULL) {
                     fprintf(stderr, "missing argument for option -L\n");
                     return false;
-                } 
+                }
                 else if (strcmp(optarg, "1") == 0) {
                     result->min_log_level = LOGGER_LEVEL_INFO;
-                } 
+                }
                 else if (strcmp(optarg, "2") == 0) {
                     result->min_log_level = LOGGER_LEVEL_NORMAL;
-                } 
+                }
                 else if (strcmp(optarg, "3") == 0) {
                     result->min_log_level = LOGGER_LEVEL_CRITICAL;
                 }
@@ -135,7 +135,7 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
                 else if (strcmp(optarg, "0") == 0) {
                     result->min_log_level = LOGGER_LEVEL_DEBUG;
                 }
-#endif // __USE_DEBUG_LOGS__ 
+#endif // __USE_DEBUG_LOGS__
                 else {
                     fprintf(stderr, "invalid argument for option -L\n");
                     return false;
