@@ -59,7 +59,7 @@ MANAGER:
 
    -i <SMTP server IP>: IP for the SMTP server.
    
-   -p <SMTP server port>: SMTP server port.
+   -p <Manager server port>: manager server port.
 
    Optional:
    
