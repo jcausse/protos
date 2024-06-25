@@ -9,8 +9,10 @@
 #include "manager.h"
 #include "args.h"
 
-#define BUF_SIZE 15 // Adjusted buffer size to match struct Request
-
+#define LITTLE_ENDIAN 1
+#define BIG_ENDIAN 2
+#define UNKNOWN_ENDIAN 0
+#define BUF_SIZE 1024
 // Structure for the request
 struct Request {
     uint8_t signature[2];   // Protocol signature
@@ -29,6 +31,37 @@ struct Response {
     uint64_t cantidad;      // Data quantity
     uint8_t booleano;       // Boolean flag
 };
+
+int check_endian(){
+    unsigned int x = 0x12345678;
+    unsigned char *c = (unsigned char*)&x;
+    int endian;
+    if (*c == 0x78) {
+        endian = LITTLE_ENDIAN;
+    } else if (*c == 0x12) {
+        endian = BIG_ENDIAN;
+    } else {
+        endian = UNKNOWN_ENDIAN;
+    }
+
+    return endian;
+}
+
+uint64_t switch_endian(uint64_t x){
+    int endian = check_endian();
+    if(endian == LITTLE_ENDIAN) {
+        return ((x & 0x00000000000000FFULL) << 56) |
+               ((x & 0x000000000000FF00ULL) << 40) |
+               ((x & 0x0000000000FF0000ULL) << 24) |
+               ((x & 0x00000000FF000000ULL) << 8)  |
+               ((x & 0x000000FF00000000ULL) >> 8)  |
+               ((x & 0x0000FF0000000000ULL) >> 24) |
+               ((x & 0x00FF000000000000ULL) >> 40) |
+               ((x & 0xFF00000000000000ULL) >> 56);
+    }else {
+        return x;
+    }
+}
 
 // Function prototypes
 static void send_request(int sockfd, const struct sockaddr *addr, socklen_t addrlen, struct Request *req);
@@ -92,7 +125,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (command < 0 || command > 5) {
-            printf("Invalid command. Please select a number from 0 to 7.\n");
+            printf("Invalid command. Please select a number from 0 to 5.\n");
             continue;
         }
 
@@ -118,14 +151,22 @@ int main(int argc, char *argv[]) {
 
 // Function to send request to the server
 static void send_request(int sockfd, const struct sockaddr *addr, socklen_t addrlen, struct Request *req) {
-    uint8_t buffer[BUF_SIZE];
+    uint8_t buffer[15];
     buffer[0] = req->signature[0];
     buffer[1] = req->signature[1];
     buffer[2] = req->version;
-    buffer[3] = (req->identifier >> 8) & 0xFF;
-    buffer[4] = req->identifier & 0xFF;
+
+    if(check_endian() == LITTLE_ENDIAN){
+        uint16_t id = htons(req->identifier);
+        buffer[3] = (id >> 8) & 0xFF;
+        buffer[4] = id & 0xFF;
+    }else{
+        buffer[3] = (req->identifier >> 8) & 0xFF;
+        buffer[4] = req->identifier & 0xFF;
+    }
+    
     memcpy(buffer + 5, req->auth, 8);
-    buffer[14] = req->command;
+    buffer[13] = req->command;
 
     // Send the request
     if (sendto(sockfd, buffer, sizeof(buffer), 0, addr, addrlen) != sizeof(buffer)) {
@@ -142,7 +183,7 @@ static void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrl
 
     printf("Received %d bytes\n", n);
     // Check if the received length is correct
-    if (n != sizeof(buffer)) {
+    if (n < 15) {
         fprintf(stderr, "Error: Response received with incorrect length.\n");
         exit(EXIT_FAILURE);
     }
@@ -150,7 +191,9 @@ static void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrl
     res->signature[0] = buffer[0];
     res->signature[1] = buffer[1];
     res->version = buffer[2];
+
     res->identifier = (buffer[3] << 8) | buffer[4];
+
     res->status = buffer[5];
     res->cantidad = ((uint64_t)buffer[6] << 56) |
                     ((uint64_t)buffer[7] << 48) |
@@ -160,6 +203,7 @@ static void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrl
                     ((uint64_t)buffer[11] << 16) |
                     ((uint64_t)buffer[12] << 8) |
                     (uint64_t)buffer[13];
+    res->cantidad = switch_endian(res->cantidad);
     res->booleano = buffer[14];
 }
 
