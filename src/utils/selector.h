@@ -2,11 +2,11 @@
  * \file        selector.h
  * \brief       Selector allows monitoring of multiple file descriptors at
  *              the same time, useful for non-blocking socket applications.
- * 
+ *
  * \note        HashMap library is required.
  * \note        LinkedList library is required.
  * \note        Exceptions header file is required.
- * 
+ *
  * \date        June, 2024
  * \author      Causse, Juan Ignacio (jcausse@itba.edu.ar)
 */
@@ -17,9 +17,9 @@
 #include <stdbool.h>        // bool, true, false
 #include <sys/select.h>     // select()
 #include <unistd.h>         // close()
-#include "hashmap.h"
-#include "linkedlist.h"
-#include "exceptions.h"
+#include "../lib/hashmap.h"
+#include "../lib/linkedlist.h"
+#include "../lib/exceptions.h"
 
 /*************************************************************************/
 /*                              CUSTOMIZABLE                             */
@@ -85,26 +85,26 @@ typedef enum {
  * \brief       Creates a new Selector with no timeout (*Selector_select* will block until
  *              any file descriptor becomes ready).
  * \details     Calling this function is equivalent to *Selector_create_timeout(SELECTOR_NO_TIMEOUT, data_free_cb)*.
- * 
+ *
  * \param[in] data_free_cb  Callback used to free file descriptor data when a file descriptor is
  *                          removed from the Selector, or when performing a cleanup.
- * 
+ *
  * \return      A new Selector on success, NULL on failure (memory not available or NULL *data_free_cb*).
 */
 Selector Selector_create(SelectorDataCleanupCallback data_free_cb);
 
 /**
  * \brief       Creates a new Selector with a custom timeout.
- * 
+ *
  * \param[in] timeout   Amount of seconds *Selector_select* will wait for any file descriptor
  *                      to become ready for any type of operation (read / write). -1 means no
- *                      timeout, so *Selector_select* will wait indefinitely for at least 1 
+ *                      timeout, so *Selector_select* will wait indefinitely for at least 1
  *                      file descriptor to become ready (blocking function call).
  *                      This parameter can either be set to -1 to indicate no timeout, or to a
  *                      number greater or equal to 1.
  * \param[in] data_free_cb  Callback used to free file descriptor data when a file descriptor is
  *                          removed from the Selector, or when performing a cleanup.
- * 
+ *
  * \return      A new Selector on success, NULL on failure (memory not available, invalid timeout
  *              or NULL *data_free_cb*).
 */
@@ -115,7 +115,7 @@ Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_f
  *              already been registered for any operation, its mode is updated (it is added for
  *              any operations it is not currently subscribed for), but its *type* and its
  *              *data* are NOT modified.
- * 
+ *
  * \details     This function also allows for additional information to be attached the
  *              file descriptor: an optional "type", and an optional "data".
  *              -   The "type" is intended to hold an integer >= 0 that could help later
@@ -128,23 +128,23 @@ Selector Selector_create_timeout(int timeout, SelectorDataCleanupCallback data_f
  *              processed internally by the Selector. These parameters are ment to be
  *              retrieved along with the file descriptor when calling *Selector_read_next*
  *              or *Selector_write_next*;
- * 
+ *
  * \param[in]   self    The Selector itself, returned by Selector_create.
  * \param[in]   fd      File descriptor.
  * \param[in]   mode    Mode (read, write, read/write).
  * \param[in]   type    Additional type associated to the file descriptor (see details).
  * \param[in]   data    Additional data associated to the file descriptor (see details).
- * 
+ *
  * \return      Can return the following error codes (see Selector Errors enumeration):
  *              1. SELECTOR_OK
  *              2. SELECTOR_INVALID
  *              3. SELECTOR_NO_MEMORY
  *              4. SELECTOR_BAD_MODE
  */
-SelectorErrors Selector_add(Selector const self, 
-    const int fd, 
-    SelectorModes mode, 
-    int type, 
+SelectorErrors Selector_add(Selector const self,
+    const int fd,
+    SelectorModes mode,
+    int type,
     void * data
 );
 
@@ -153,38 +153,38 @@ SelectorErrors Selector_add(Selector const self,
  *              the file descriptor for the selected operation it does not remain
  *              subscribed for any other operation, its *data* will be free'd if the
  *              *free_data* parameter is true.
- * 
+ *
  * \param[in]   self        The Selector itself, returned by Selector_create.
  * \param[in]   fd          File descriptor.
  * \param[in]   mode        Mode (read, write, read/write).
  * \param[in]   free_data   Indicates whether to free associated data or not.
- * 
+ *
  * \return      Can return the following error codes (see Selector Errors enumeration):
  *              1. SELECTOR_OK
  *              2. SELECTOR_INVALID
  *              3. SELECTOR_BAD_MODE
 */
-SelectorErrors Selector_remove(Selector const self, 
-    const int fd, 
-    SelectorModes mode, 
+SelectorErrors Selector_remove(Selector const self,
+    const int fd,
+    SelectorModes mode,
     bool free_data
 );
 
 /**
  * \brief       Perform a select (2) operation on previously added file descriptors.
- * 
+ *
  * \details     After the call to this function returns, *Selector_read_has_next* and
  *              *Selector_write_has_next* must be used to check if there are file
  *              descriptors available to perform any operation. If both return false, it
- *              means that the timeout specified when creating the Selector has been 
+ *              means that the timeout specified when creating the Selector has been
  *              reached.
  *              This operation restarts the file descriptor iterators set by any previous
  *              *Selector_select* operations, so make sure *Selector_read_has_next* and
  *              *Selector_write_has_next* return *false* before performing a new
  *              *Selector_select* operation.
- * 
+ *
  * \param[in]   self        The Selector itself, returned by Selector_create.
- * 
+ *
  * \return      Can return the following error codes (see Selector Errors enumeration):
  *              1. SELECTOR_OK
  *              2. SELECTOR_INVALID
@@ -194,7 +194,7 @@ SelectorErrors Selector_select(Selector const self);
 
 /**
  * \brief       Get the next file descriptor available for reading.
- * 
+ *
  * \param[in]  self         The Selector itself, returned by Selector_create.
  * \param[out] type         The *type* associated to the file descriptor when it was
  *                          added by *Selector_add*. This parameter is set to -1 if
@@ -202,7 +202,7 @@ SelectorErrors Selector_select(Selector const self);
  * \param[out] data         The *data* associated to the file descriptor when it was
  *                          added by *Selector_add*. This parameter is set to NULL if
  *                          there is no associated type.
- * 
+ *
  * \return      Returns:
  *              1. A file descriptor available for a READ operation.
  *              2. SELECTOR_NO_FD if no fd is available for reading.
@@ -212,7 +212,7 @@ int Selector_read_next(Selector const self, int * type, void ** data);
 
 /**
  * \brief       Get the next file descriptor available for writing.
- * 
+ *
  * \param[in]  self         The Selector itself, returned by Selector_create.
  * \param[out] type         The *type* associated to the file descriptor when it was
  *                          added by *Selector_add*. This parameter is set to -1 if
@@ -220,7 +220,7 @@ int Selector_read_next(Selector const self, int * type, void ** data);
  * \param[out] data         The *data* associated to the file descriptor when it was
  *                          added by *Selector_add*. This parameter is set to NULL if
  *                          there is no associated type.
- * 
+ *
  * \return      Returns:
  *              1. A file descriptor available for a WRITE operation.
  *              2. SELECTOR_NO_FD if no fd is available for writing.
@@ -232,7 +232,7 @@ int Selector_write_next(Selector const self, int * type, void ** data);
  * \brief       Cleanup the Selector structures and release all memory allocated for
  *              associated data. Attempts to close every file descriptor it contains,
  *              but ignores any errors that may arise.
- * 
+ *
  * \param[in] self          The Selector itself, returned by Selector_create.
 */
 void Selector_cleanup(Selector self);
