@@ -392,6 +392,8 @@ HandlerErrors handle_client_read (int fd, void * data){
                         domain[k] = '\0';
                     }
                 }
+                for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
+                clientData->receiverMailsAmount = 0;
             }
             else if(structure->dataStr != NULL){
                 LOG_DEBUG("Command Read: %s", structure->dataStr);
