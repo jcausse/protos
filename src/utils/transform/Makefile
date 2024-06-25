@@ -12,4 +12,4 @@ central.o: central.c central.h
 	$(CC) $(CFLAGS) -c central.c -o central.o
 
 clean:
-	- rm -f *.o *.gch
+	- rm -f *.o *.gch *.exe
