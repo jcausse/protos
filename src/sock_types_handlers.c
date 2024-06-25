@@ -251,13 +251,18 @@ HandlerErrors handle_client_read (int fd, void * data){
     }
 
     LOG_DEBUG("readBuff: %sbytes: %lu", buff, bytes);
-
     if(buff[0] == '\r' || buff[0] == '\n'){
-        for(int i=0; i < WRITE_BUFF_SIZE ; i++) buff[i] = '\0';
+        for(int i=0; i < READ_BUFF_SIZE ; i++) buff[i] = '\0';
         Selector_add(selector, fd, SELECTOR_WRITE, -1 , NULL);
         Selector_remove(selector, fd, SELECTOR_READ, false);
         return HANDLER_OK;
     }
+
+    int i = 0;
+    while(buff[i] != '\r' && buff[i] != '\n') i++;
+    i += 2;
+    while(i < READ_BUFF_SIZE) buff[i++] = '\0';
+
     /*
     char aux[READ_BUFF_SIZE] = {0};
 
