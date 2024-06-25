@@ -20,7 +20,7 @@
 #define MAX_DIR_SIZE 512 // Out file system has a 2-level directory to save the mails
 #define REL_TMP "../tmp"
 #define REL_INBOX "../inbox"
-#define RW_FOPEN "r+"
+#define RW_FOPEN "a+"
 
 #define SERVER_ERROR "421-%s Service not available, closing transmission channel.\r\n"
 #define MAIL_FROM_STR "MAIL FROM: <%s>\r\n"
@@ -324,8 +324,10 @@ HandlerErrors handle_client_read (int fd, void * data){
 
             time_t t = time(NULL);
             struct tm tm = *localtime(&t);
-            sprintf(fileName, "%s/From:%s-%d-%02d-%02d %02d:%02d:%02d", TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+            sprintf(fileName, "%s/%s - %d-%02d-%02d - %02d %02d %02d", TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
             clientData->mailFile = fopen(fileName, RW_FOPEN);
+            LOG_DEBUG("mailFilePtr -> %p", clientData->mailFile);
+
             if(clientData->mailFile == NULL) {
                 // Server error, should close the connection
                 char buff[WRITE_BUFF_SIZE] = {0};
@@ -337,11 +339,10 @@ HandlerErrors handle_client_read (int fd, void * data){
             }
             fprintf(clientData->mailFile, MAIL_FROM_STR, clientData->senderMail);
             fprintf(clientData->mailFile, RCPT_TO_STR, clientData->receiverMails[clientData->receiverMailsAmount-1]);
-            fprintf(clientData->mailFile, DATA_STR); // The next state will be the data
             break;
         }
         case DATA: {
-            if(strncmp(structure->dataStr, DOT_CLRF, strlen(DOT_CLRF)) == SUCCESS) {
+            if(structure->dataStr != NULL && strncmp(structure->dataStr, DOT_CLRF, strlen(DOT_CLRF)) == SUCCESS) {
                 fprintf(clientData->mailFile, LITERAL_STR,structure->dataStr);
 
                 time_t t = time(NULL);
@@ -384,8 +385,12 @@ HandlerErrors handle_client_read (int fd, void * data){
                     }
                 }
             }
-            else{
-                fprintf(clientData->mailFile, LITERAL_STR,structure->dataStr);
+            else if(structure->dataStr != NULL){
+                LOG_DEBUG("Command Read: %s", structure->dataStr);
+                fprintf(clientData->mailFile, LITERAL_STR, structure->dataStr);
+            }
+            else {
+                fprintf(clientData->mailFile, DATA_STR); // The next state will be the data
             }
         }
         default: break;
@@ -454,7 +459,7 @@ HandlerErrors handle_client_write (int fd, void * data){
         //return HANDLER_OK;
     }
 
-    LOG_DEBUG("writeBuff: %s\nbytes: %lu", clientData->parser->status, strlen(clientData->parser->status));
+    LOG_DEBUG("writeBuff: %s\n", clientData->parser->status);
 
     if(clientData->parser->status == NULL){
         Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
@@ -561,7 +566,7 @@ HandlerErrors handle_manager_write(int fd, void *data) {
     );
     LOG_VERBOSE("%d", manager_addr_len);
     LOG_VERBOSE("cmd = %d", current_manager_cmd);
-    
+
     Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_WRITE, false);
 

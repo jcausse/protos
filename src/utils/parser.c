@@ -598,6 +598,7 @@ static int rcptToOkTransition(Parser parser, char * command) {
         parser->status = strdup(ENTER_DATA_MSG);
         parser->structure = (CommandStructure *) malloc(sizeof(CommandStructure));
         parser->structure->cmd = DATA;
+        parser->structure->dataStr = NULL;
         return SUCCESS;
     }
     else if((strncmp(command, RCPT_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == SPACE){

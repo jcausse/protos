@@ -52,7 +52,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 smtpd.log
-vgcore.49725
+vgcore.*
 
 # Others
 .DS_Store
