@@ -71,7 +71,7 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
     if (argc < 7) {
         int option_index = 0;
         static struct option long_options[] = { { 0, 0, 0, 0 } };
-        c = getopt_long(argc, argv, "hd:m:s:p:t:f:L:v", long_options, &option_index);
+        c = getopt_long(argc, argv, "hd:m:s:p:t:f:L:l:v", long_options, &option_index);
         switch (c) {
             case 'h':
                 usage(argv[0]);
@@ -92,7 +92,7 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
         int option_index = 0;
         static struct option long_options[] = { { 0, 0, 0, 0 } };
 
-        c = getopt_long(argc, argv, "hd:m:s:p:t:f:L:v", long_options, &option_index);
+        c = getopt_long(argc, argv, "hd:m:s:p:t:f:L:l:v", long_options, &option_index);
         if (c == -1) {
             break;
         }
@@ -185,12 +185,12 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
 
 void usage(const char *progname) {
     fprintf(stderr,
-        "Usage: %s -d <DOMAIN NAME > -s <SMTP PORT > -p <MANAGEMENT PORT > -l <LOG FILE DIRECTTORY > [OPTION]...\n"
+        "Usage: %s -d <DOMAIN NAME> -s <SMTP PORT> -p <MANAGEMENT PORT> -l <LOG FILE PATH> [OPTION]...\n"
         "\n"
         "   -h                      Print this help message and exit.\n"
-        "   -t   <COMMAND PATH >    What transformation command will be used.\n"
-        "   -f   <VRFY DIR >        Directory where already verified mails are stored and new one will be stored.\n"
-        "   -L   <LOG_LEVEL >       Min log level.\n"
+        "   -t   <COMMAND PATH>     What transformation command will be used.\n"
+        "   -f   <VRFY PATH>        Directory where already verified mails are stored and new one will be stored.\n"
+        "   -L   <LOG_LEVEL>        Min log level.\n"
         "   -v                      Print version information and exit.\n"
         "\n",
         progname);

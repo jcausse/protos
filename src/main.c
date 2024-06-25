@@ -27,8 +27,7 @@
 #include "utils/client_data.h"
 
 #define BACKLOG_SIZE            10
-#define CONFIG_LOG_FILE         "/home/juani/Desktop/smtpd.log" // \todo HARDCODED
-#define MAX_BUFFER_SIZE 1049
+#define MAX_BUFFER_SIZE         1049
 
 /****************************************************************/
 /* Global variables                                             */
@@ -142,7 +141,7 @@ static void smtpd_init(SMTPDArgs * const args){
             (logger =
                 Logger_create(
                     logger_cfg,         // Logger configuration
-                    CONFIG_LOG_FILE     // Absolute path to the file that will hold the logs
+                    args->log_file      // Absolute path to the file that will hold the logs
                 )
             ) == NULL                   // Expected return: Logger (not NULL)
         );
@@ -225,7 +224,7 @@ static void smtpd_init(SMTPDArgs * const args){
         /* Could not create the logger */
         if (logger == NULL){
             if (errno == EACCES){
-                fprintf(stderr, MSG_ERR_EACCES, CONFIG_LOG_FILE);
+                fprintf(stderr, MSG_ERR_EACCES, args->log_file);
             }
             else if (errno == ENOMEM){
                 fprintf(stderr, MSG_ERR_NO_MEM);
