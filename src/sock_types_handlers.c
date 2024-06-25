@@ -96,6 +96,8 @@ HandlerErrors handle_server4 (int fd, void * _){
                 data->w_buff[i] = '\0';
             }
             data->parser = initParser(DOMAIN);
+            data->receiverMails = (char **) malloc(sizeof(char *));
+            data->receiverMailsAmount = 0;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
@@ -158,6 +160,8 @@ HandlerErrors handle_server6 (int fd, void * _){
                 data->w_buff[i] = '\0';
             }
             data->parser = initParser(DOMAIN);
+            data->receiverMails = (char **) malloc(sizeof(char *));
+            data->receiverMailsAmount = 0;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
@@ -264,7 +268,8 @@ HandlerErrors handle_client_read (int fd, void * data){
         case EHLO: clientData->clientDomain = strdup(structure->ehloDomain); break;
         case MAIL_FROM: clientData->senderMail = strdup(structure->mailFromStr); break;
         case RCPT_TO: {
-            clientData->receiverMails = strdup(structure->rcptToStr);
+            clientData->receiverMails[clientData->receiverMailsAmount] = strdup(structure->rcptToStr);
+            clientData->receiverMailsAmount++;
             char fileName[MAX_DIR_SIZE] = {0};
 
             time_t t = time(NULL);
@@ -281,7 +286,7 @@ HandlerErrors handle_client_read (int fd, void * data){
                 return HANDLER_OK;
             }
             fprintf(clientData->mailFile, MAIL_FROM_STR, clientData->senderMail);
-            fprintf(clientData->mailFile, RCPT_TO_STR, clientData->receiverMails);
+            fprintf(clientData->mailFile, RCPT_TO_STR, clientData->receiverMails[clientData->receiverMailsAmount-1]);
             fprintf(clientData->mailFile, DATA_STR); // The next state will be the data
             break;
         }
