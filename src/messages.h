@@ -50,6 +50,7 @@
 #define MSG_INFO_MNG_SOCKET_CREATED "Listening for management connections on UDP port %d."
 #define MSG_INFO_STATS_CREATED      "Statistics initialized."
 #define MSG_INFO_SELECTOR_CREATED   "Selector started."
+#define MSG_INFO_BAD_MNGR_COMMAND   "Manager sent an invalid command."
 
 /********************************************************/
 /* Debug log messages                                   */

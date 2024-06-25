@@ -50,10 +50,12 @@ SockWriteHandler write_handlers[] = {
 /* Private helper declarations                                                                 */
 /***********************************************************************************************/
 
+#define RESPONSE_SIZE 15
 // Clears the first offset bytes in the array and reallocates
 // the string at the beggining of the array
 static int clearBuff(int offset, char * buff);
 
+static void prepare_response(uint8_t response[RESPONSE_SIZE], uint16_t identifier, uint8_t status, uint64_t data, uint8_t booleano);
 
 /***********************************************************************************************/
 /* Read handler definitions                                                                    */
@@ -251,15 +253,12 @@ HandlerErrors handle_client_read (int fd, void * data){
     return HANDLER_OK;
 }
 
-/**
- * \todo
- */
 HandlerErrors handle_manager_read (int fd, void * data){
     /* Local variables */
     uint8_t buffer[32];
     struct sockaddr_storage client_addr;
     socklen_t addr_len = sizeof(client_addr);
-    ssize_t read;
+    size_t read;
 
     /* Attempt to read from socket */
     read = recvfrom(
@@ -271,11 +270,11 @@ HandlerErrors handle_manager_read (int fd, void * data){
         &addr_len
     );
 
-    // Parse read message
+    /* Parse read message */
     MngrCommand cmd;
-    if (!manager_parse(buffer, (size_t)read, &cmd)) {
-        fprintf(stderr, "Error parsing manager command\n");
-        return -1; //handle error
+    if (! manager_parse(buffer, read, &cmd)){
+        LOG_VERBOSE(MSG_INFO_BAD_MNGR_COMMAND);
+        return HANDLER_NO_OP;
     }
 
     // Process the command
@@ -349,7 +348,7 @@ HandlerErrors handle_client_write (int fd, void * data){
  * \todo
  */
 
-#define RESPONSE_SIZE 15
+
 // Example of global variables
 int historic_connections = 1000;
 int current_connections = 5;
@@ -357,16 +356,7 @@ int bytes_transferred = 123456;
 int verification = 0;
 char transformation_program[256] = "";
 // Helper function to prepare response based on command
-static void prepare_response(uint8_t response[RESPONSE_SIZE], uint16_t identifier, uint8_t status, uint64_t data, uint8_t booleano) {
-    response[0] = PROTOCOL_SIGNATURE_1;
-    response[1] = PROTOCOL_SIGNATURE_2;
-    response[2] = PROTOCOL_VERSION;
-    response[3] = (identifier >> 8) & 0xFF; // High byte of identifier
-    response[4] = identifier & 0xFF;        // Low byte of identifier
-    response[5] = status;
-    memcpy(response + 6, &data, sizeof(uint64_t));
-    response[14] = booleano;
-}
+
 
 HandlerErrors handle_manager_write(int fd, void *data) {
     if (data == NULL) {
@@ -462,4 +452,15 @@ static int clearBuff(int offset, char * buff) {
     }
     while(i < offset) buff[i] = '\0';
     return strlen(buff);
+}
+
+static void prepare_response(uint8_t response[RESPONSE_SIZE], uint16_t identifier, uint8_t status, uint64_t data, uint8_t booleano){
+    response[0] = PROTOCOL_SIGNATURE_1;
+    response[1] = PROTOCOL_SIGNATURE_2;
+    response[2] = PROTOCOL_VERSION;
+    response[3] = (identifier >> 8) & 0xFF; // High byte of identifier
+    response[4] = identifier & 0xFF;        // Low byte of identifier
+    response[5] = status;
+    memcpy(response + 6, &data, sizeof(uint64_t));
+    response[14] = booleano;
 }
