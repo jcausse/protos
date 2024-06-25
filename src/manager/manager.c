@@ -107,9 +107,9 @@ int main(int argc, char *argv[]) {
         printf("Amount: %" PRIu64 "\n", res.cantidad);
         printf("Boolean: %u\n\n", res.booleano);
 
-        if (command == CMD_TRANSFORMACIONES_OFF || command == CMD_TRANSFORMACIONES_ON) {
-            printf("Transformation status = %s\n", res.booleano ? "ON" : "OFF");
-        }
+        // if (command == CMD_TRANSFORMACIONES_OFF || command == CMD_TRANSFORMACIONES_ON) {
+        //     printf("Transformation status = %s\n", res.booleano ? "ON" : "OFF");
+        // }
     }
 
     close(sockfd);
@@ -169,8 +169,8 @@ static void print_menu() {
     printf("0. Number of historical connections\n");
     printf("1. Number of concurrent connections\n");
     printf("2. Number of bytes transferred\n");
-    printf("3. Check transformation status\n");
-    printf("4. Transformations ON\n");
-    printf("5. Transformations OFF\n");
-    printf("Select a command (0-5): ");
+    // printf("3. Check transformation status\n");
+    // printf("4. Transformations ON\n");
+    // printf("5. Transformations OFF\n");
+    printf("Select a command (0-2): ");
 }
