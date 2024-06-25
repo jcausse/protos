@@ -40,7 +40,7 @@ SMTPD:
    
    -p <management port>: Port for the manager server.
 
-   -l <log file path>: Path for smtpd logging output.
+   -l <log file path>: Path for smtpd logging output  (smtpd.log).
       
    Optional:
    
