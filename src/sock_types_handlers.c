@@ -15,7 +15,7 @@
 #include "utils/sockets.h"
 
 #define CLOSED 0
-#define MANAGER_READ_BUFF_SIZE 32
+#define MANAGER_READ_BUFF_SIZE 15
 #define MAX_DIR_SIZE 512 // Out file system has a 2-level directory to save the mails
 #define REL_TMP "../tmp"
 #define REL_INBOX "../inbox"
@@ -352,33 +352,28 @@ HandlerErrors handle_manager_read (int fd, void * data){
 
     /* Local variables */
     uint8_t buffer[MANAGER_READ_BUFF_SIZE];
-    manager_addr_len = sizeof(manager_addr);
-    ssize_t read;
+    struct sockaddr_in manager_addr;
+    socklen_t manager_addr_len = sizeof(manager_addr);
+    ssize_t read_bytes;
 
     /* Attempt to read from socket */
-    read = recvfrom(
-        fd,
-        buffer,
-        MANAGER_READ_BUFF_SIZE * sizeof(buffer[0]),
-        MSG_DONTWAIT,
-        (struct sockaddr *) &manager_addr,
-        &manager_addr_len
-    );
+    read_bytes = recvfrom(fd, buffer, MANAGER_READ_BUFF_SIZE, MSG_DONTWAIT,
+                          (struct sockaddr *) &manager_addr, &manager_addr_len);
+    
+    LOG_VERBOSE("Received %ld bytes from manager", read_bytes);
 
     /* If an error occurred, return */
-    if (read == -1){
+    if (read_bytes == -1){
         return HANDLER_NO_OP;
     }
 
     /* Parse read message */
     MngrCommand cmd;
-    if (! manager_parse(buffer, (size_t) read, &cmd)){
-        LOG_VERBOSE(MSG_INFO_BAD_MNGR_COMMAND);
+    if (! manager_parse(buffer, (size_t) read_bytes, &cmd)){
+        LOG_VERBOSE(" Manager sent an invalid command.");
         return HANDLER_NO_OP;
     }
 
-    current_manager_cmd = cmd;
-    LOG_VERBOSE(MSG_INFO_MNGR_COMMAND, get_cmd_string(cmd), cmd);
 
     Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_READ, false);

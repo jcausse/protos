@@ -1,15 +1,15 @@
-#include <stdio.h>         // Standard input-output header
-#include <stdlib.h>        // Standard library header (includes exit functions)
-#include <string.h>        // String manipulation functions
-#include <unistd.h>        // UNIX standard function definitions
-#include <arpa/inet.h>     // Definitions for internet operations
-#include <inttypes.h>      // Integer types and formatting macros
-#include <sys/socket.h>    // Main sockets library
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <inttypes.h>
+#include <sys/socket.h>
 
-#include "manager.h"       // Protocol definitions
-#include "args.h"          // Argument parsing functions
-#define BUF_SIZE 1024      // Buffer size for input
+#include "manager.h"
+#include "args.h"
 
+#define BUF_SIZE 15 // Adjusted buffer size to match struct Request
 
 // Structure for the request
 struct Request {
@@ -66,11 +66,6 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    char input[BUF_SIZE];
-    int command;
-    struct Response res;
-    socklen_t addrlen = sizeof(server_addr);
-
     struct Request req = {
         { PROTOCOL_SIGNATURE_1, PROTOCOL_SIGNATURE_2 },
         0x00,
@@ -79,10 +74,22 @@ int main(int argc, char *argv[]) {
         CMD_CONEX_HISTORICAS
     };
 
+    struct Response res;
+    socklen_t addrlen = sizeof(server_addr);
+
     while (1) {
         print_menu();
-        fgets(input, sizeof(input), stdin);
-        sscanf(input, "%d", &command);
+        
+        char input[BUF_SIZE];
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("Error reading input.\n");
+            continue;
+        }
+        int command;
+        if (sscanf(input, "%d", &command) != 1) {
+            printf("Invalid input. Please enter a number.\n");
+            continue;
+        }
 
         if (command < 0 || command > 7) {
             printf("Invalid command. Please select a number from 0 to 7.\n");
@@ -111,7 +118,7 @@ int main(int argc, char *argv[]) {
 
 // Function to send request to the server
 static void send_request(int sockfd, const struct sockaddr *addr, socklen_t addrlen, struct Request *req) {
-    uint8_t buffer[14];  // Buffer for the request
+    uint8_t buffer[BUF_SIZE];
     buffer[0] = req->signature[0];
     buffer[1] = req->signature[1];
     buffer[2] = req->version;
@@ -129,9 +136,9 @@ static void send_request(int sockfd, const struct sockaddr *addr, socklen_t addr
 
 // Function to receive response from the server
 static void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrlen, struct Response *res) {
-    uint8_t buffer[15];  // Buffer for the response
+    uint8_t buffer[BUF_SIZE];
     int n = recvfrom(sockfd, buffer, sizeof(buffer), 0, addr, addrlen);
-
+    printf("Received %d bytes\n", n);
     // Check if the received length is correct
     if (n != sizeof(buffer)) {
         fprintf(stderr, "Error: Response received with incorrect length.\n");
