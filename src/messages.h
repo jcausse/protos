@@ -38,7 +38,8 @@
 /* Normal log messages                                  */
 /********************************************************/
 
-#define MSG_NEW_CLIENT              "New client connected at %s : %d"
+#define MSG_SERVER_STARTED          "Server started."
+#define MSG_NEW_CLIENT              "New client connected at %s : %d."
 
 /********************************************************/
 /* Verbose log messages                                 */

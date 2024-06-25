@@ -1,4 +1,4 @@
-CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L
+CFLAGS := -std=c11 -pedantic -pedantic-errors -Wall -Werror -Wextra -D_POSIX_C_SOURCE=200112L -g
 EXEC_NAME := manager.bin
 
 .PHONY: all clean

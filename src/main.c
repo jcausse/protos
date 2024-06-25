@@ -88,118 +88,13 @@ void sigint_handler(int sigint);
 /* Main function                                                */
 /****************************************************************/
 
-// \todo revisar
-#if 0
-typedef struct{
-    int pid;                    //Process pid
-    int toSlavePipe[2];         //Pipes to send and receive messages to the slave
-    int fromSlavePipe[2];
-} SlaveInfo;
-
-SlaveInfo create_transformer(char* command){
-
-    SlaveInfo slave;
-
-    if (pipe(slave.toSlavePipe) == -1 || pipe(slave.fromSlavePipe) == -1) {
-        perror("pipe");
-        slave.pid = -1;
-        return slave;
-    }
-
-    if ((slave.pid = fork()) == 0) {
-            // Código para el proceso hijo (slave)
-        bool        transform_enabled;
-        close(slave.toSlavePipe[1]);
-        close(slave.fromSlavePipe[0]);
-
-            // Redirecciona las entradas/salidas estándar según sea necesario
-        dup2(slave.toSlavePipe[0], STDIN_FILENO);
-        dup2(slave.fromSlavePipe[1], STDOUT_FILENO);
-        char * args[] = {"./central.exe",command,NULL};
-        execve("./central.exe",args, NULL);
-
-        perror("execve");
-        slave.pid = -1;
-        return slave;
-
-        } else if (slave.pid == -1) {
-        perror("fork");
-        slave.pid = -1;
-        return slave;
-
-        }else {
-            // Código para el proceso padre
-            close(slave.fromSlavePipe[1]);
-            close(slave.toSlavePipe[0]);
-        }
-        return slave;
-}
-
-void free_transformer(SlaveInfo slave){
-    close(slave.toSlavePipe[0]);
-    close(slave.fromSlavePipe[1]);
-    kill(slave.pid, SIGKILL);
-}
-
-int transform_mail(char* file_name, SlaveInfo central){
-    char outputBuffer[MAX_BUFFER_SIZE];
-    ssize_t nbytes;
-    /*Send file to slave*/
-    write(central.toSlavePipe[1], file_name, strlen(file_name) + 1);
-    /*Get answer from the slave*/
-    nbytes = read(central.fromSlavePipe[0], outputBuffer, sizeof(outputBuffer) - 1);
-    if (nbytes > 0) {
-        outputBuffer[nbytes] = '\0';  // Null-terminate the output buffer
-        if (strcmp(outputBuffer, SUCCESS) == 0) {
-            return 254;
-        } else {
-            return 255;
-        }
-    } else {
-        perror("read from slave");
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
-}
-#endif
-
 int main(int argc, char ** argv){
     /* Parse command-line arguments */
     SMTPDArgs args;
 
-// \todo revisar
-#if 0
-    SlaveInfo central;
-#endif
-
     if (! parse_args(argc, argv, &args)){
         return EXIT_FAILURE;
     }
-
-// \todo revisar
-#if 0
-    if(args.trsf_enabled == true){
-        central = create_transformer(args.trsf_cmd);
-    }
-    transform_enabled = args.trsf_enabled;
-
-    if(central.pid == -1){
-        perror("Transformation central failure");
-        return EXIT_FAILURE;
-    }
-
-    char * file_name;
-    /* FIle names should be like userName-Nameformail.txt*/
-    /*If there is a new mail to transform*/
-    if(args.trsf_enabled == true){
-        if(transform_mail(file_name, central) == 255){
-            /*Informe user of failure*/
-        }else{
-            /*Informe user of success*/
-        }
-    }
-    // \todo mover
-#endif
 
     /* Initialize and start server */
     smtpd_init(&args);                  // Initialize SMTPD.
@@ -374,6 +269,8 @@ static void smtpd_init(SMTPDArgs * const args){
         safe_close(mngr_fd);
         smtpd_abort();
     }
+
+    LOG_MSG(MSG_SERVER_STARTED);
 }
 
 static void smtpd_start(void){

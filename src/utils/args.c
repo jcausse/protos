@@ -68,10 +68,10 @@ typedef enum {
 bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
     int c;
     if (argc < 7) {
-         int option_index = 0;
+        int option_index = 0;
         static struct option long_options[] = { { 0, 0, 0, 0 } };
-         c = getopt_long(argc, argv, "hd:m:s:p:t:f:L:v", long_options, &option_index);
-          switch (c) {
+        c = getopt_long(argc, argv, "hd:m:s:p:t:f:L:v", long_options, &option_index);
+        switch (c) {
             case 'h':
                 usage(argv[0]);
                 break;
@@ -80,8 +80,8 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
                 exit(0);
                 break;
             default:
-                fprintf(stderr, "unknown argument %d.\n", c);
-                exit(1);
+                usage(argv[0]);
+                exit(0);
         }
     }
 
@@ -121,13 +121,22 @@ bool parse_args(int argc, char **argv, SMTPDArgs *const result) {
                 if (optarg == NULL) {
                     fprintf(stderr, "missing argument for option -L\n");
                     return false;
-                } else if (strcmp(optarg, "1") == 0) {
+                } 
+                else if (strcmp(optarg, "1") == 0) {
                     result->min_log_level = LOGGER_LEVEL_INFO;
-                } else if (strcmp(optarg, "2") == 0) {
+                } 
+                else if (strcmp(optarg, "2") == 0) {
                     result->min_log_level = LOGGER_LEVEL_NORMAL;
-                } else if (strcmp(optarg, "3") == 0) {
+                } 
+                else if (strcmp(optarg, "3") == 0) {
                     result->min_log_level = LOGGER_LEVEL_CRITICAL;
-                } else {
+                }
+#ifdef __USE_DEBUG_LOGS__
+                else if (strcmp(optarg, "0") == 0) {
+                    result->min_log_level = LOGGER_LEVEL_DEBUG;
+                }
+#endif // __USE_DEBUG_LOGS__ 
+                else {
                     fprintf(stderr, "invalid argument for option -L\n");
                     return false;
                 }
@@ -165,6 +174,7 @@ void usage(const char *progname) {
     fprintf(stderr,
         "Usage: %s -d <DOMAIN NAME > -s <SMTP PORT > -p <MANAGEMENT PORT > [OPTION]...\n"
         "\n"
+        "   -h                      Print this help message and exit.\n"
         "   -t   <COMMAND PATH >    What transformation command will be used.\n"
         "   -f   <VRFY DIR >        Directory where already verified mails are stored and new one will be stored.\n"
         "   -L   <LOG_LEVEL >       Min log level.\n"
@@ -178,14 +188,15 @@ void version(void) {
     fprintf(stdout, "%s v%s\n", PRODUCT_NAME, PRODUCT_VERSION);
     fprintf(stdout, "%s\n", ORGANIZATION);
 
-    fprintf(stdout, "Authors:");
+    fprintf(stdout, "Authors:\n");
     unsigned int i = 0;
     while(team_members_last_names[i] != NULL){
-        fprintf(stdout, "* %5s: %12s, %15s\n",
+        fprintf(stdout, "* %5s: %-20s %-15s\n",
             team_members_ids[i],
             team_members_last_names[i],
             team_members_first_names[i]
         );
+        i++;
     }
 
     printf("Compiled on %s at %s\n", COMPILATION_DATE, COMPILATION_TIME);
