@@ -414,7 +414,6 @@ HandlerErrors handle_client_write (int fd, void * data){
         return HANDLER_OK;
     }
 
-    free(clientData->parser->status);
     Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_WRITE, false);
 
