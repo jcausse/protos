@@ -78,7 +78,7 @@ char *strdup(const char *s);
 
 // Clears the first offset bytes in the array and reallocates
 // the string at the beggining of the array
-static int clearBuff(int offset, char * buff);
+//static int clearBuff(int offset, char * buff);
 
 #define RESPONSE_SIZE 15
 
@@ -245,6 +245,9 @@ HandlerErrors handle_client_read (int fd, void * data){
         return HANDLER_OK;
     }
 
+    LOG_DEBUG("readBuff: %sbytes: %lu", buff, bytes);
+
+    /*
     char aux[READ_BUFF_SIZE] = {0};
 
     if(clientData->r_count != 0) {
@@ -258,7 +261,6 @@ HandlerErrors handle_client_read (int fd, void * data){
 
     size_t read = strlen(aux);
     int i = 0;
-
     while(i < bytes && buff[i] != '\n' && buff[i] != '\0') {
         aux[i + read] = buff[i];
         i++;
@@ -271,7 +273,9 @@ HandlerErrors handle_client_read (int fd, void * data){
         }
         return HANDLER_OK;
     }
-    int ret = parseCmd(clientData->parser, aux);
+    LOG_DEBUG("auxCmd: %s\n", aux);
+    */
+    int ret = parseCmd(clientData->parser, buff);
     if(ret == TERMINAL) {
         // State on the client has been achieved, need to free
         // file resources, discard temp files created that are not
@@ -335,15 +339,10 @@ HandlerErrors handle_client_read (int fd, void * data){
         }
         default: break;
     }
-
-    // Status to inform the client to the client
-    strcpy(clientData->w_buff, clientData->parser->status);
-    clientData->w_count = strlen(clientData->w_buff);
-
+    LOG_DEBUG("readResult: %s\n", clientData->parser->status);
 
     Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_READ, false);
-
     return HANDLER_OK;
 }
 
@@ -396,12 +395,17 @@ HandlerErrors handle_manager_read (int fd, void * data){
 HandlerErrors handle_client_write (int fd, void * data){
     ClientData clientData = (ClientData) data;
 
+    LOG_DEBUG("writeBuff: %s\n", clientData->parser->status);
+
     if(clientData->w_count < 1){
         //return HANDLER_OK;
     }
 
+    LOG_DEBUG("writeBuff: %s\nbytes: %lu", clientData->parser->status, strlen(clientData->parser->status));
 
     if(clientData->parser->status == NULL){
+        Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
+        Selector_remove(selector, fd, SELECTOR_WRITE, false);
         return HANDLER_OK;
     }
 
@@ -415,6 +419,7 @@ HandlerErrors handle_client_write (int fd, void * data){
         return HANDLER_OK;
     }
 
+    free(clientData->parser->status);
     Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_WRITE, false);
 
@@ -513,7 +518,7 @@ HandlerErrors handle_manager_write(int fd, void *data) {
 /* Private helper definitions                                                                  */
 /***********************************************************************************************/
 
-static int clearBuff(int offset, char * buff) {
+/*static int clearBuff(int offset, char * buff) {
     LOG_DEBUG("beforeClear: %s", buff);
     int i = 0;
     while(offset < WRITE_BUFF_SIZE && buff[offset] != '\0') {
@@ -526,7 +531,7 @@ static int clearBuff(int offset, char * buff) {
     while(i < offset) buff[i] = '\0';
     return strlen(buff);
 }
-
+*/
 static const char * get_cmd_string(MngrCommand cmd){
     switch(cmd){
         case CMD_CONEX_HISTORICAS:
