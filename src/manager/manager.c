@@ -7,7 +7,7 @@
 #include <sys/socket.h>    // Main sockets library
 
 #include "manager.h"       // Protocol definitions
-
+#include "args.h"          // Argument parsing functions
 #define BUF_SIZE 1024      // Buffer size for input
 
 
@@ -36,80 +36,76 @@ static void receive_response(int sockfd, struct sockaddr *addr, socklen_t *addrl
 static void print_menu();
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        // Print usage message and exit if incorrect number of arguments
-        fprintf(stderr, "Usage: %s <server_ip> <port>\n", argv[0]);
+    UDPArgs args;
+    if(argc < 2){
+        fprintf(stderr, "Usage: %s -i <server_ip> -p <port>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    // Parse command-line arguments
+    if (!parse_args(argc, argv, &args)) {
+        fprintf(stderr, "Failed to parse arguments.\n");
         exit(EXIT_FAILURE);
     }
 
-    char *server_ip = argv[1];  // Server IP address
-    int port = atoi(argv[2]);   // Server port number
+    char *server_ip = args.server_ip;
+    int port = args.port;
 
-    struct sockaddr_in server_addr;  // Server address structure
-    memset(&server_addr, 0, sizeof(server_addr));  // Zero out the structure
-    server_addr.sin_family = AF_INET;  // Set address family to Internet
-    server_addr.sin_port = htons(port);  // Set port number
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
 
-    // Convert IP address from text to binary form
     if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
         perror("inet_pton failed");
         exit(EXIT_FAILURE);
     }
 
-    int sockfd;  // Socket file descriptor
-    // Create UDP socket
+    int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("socket creation failed");
         exit(EXIT_FAILURE);
     }
 
-    // Variables for menu handling
-    char input[BUF_SIZE];  // Input buffer
-    int command;  // Command variable
-    struct Response res;  // Response structure
-    socklen_t addrlen = sizeof(server_addr);  // Address length
+    char input[BUF_SIZE];
+    int command;
+    struct Response res;
+    socklen_t addrlen = sizeof(server_addr);
 
-    // Structure for the request
     struct Request req = {
-        { PROTOCOL_SIGNATURE_1, PROTOCOL_SIGNATURE_2 },  // Protocol signature
-        0x00,  // Version
-        htons(0x1234),  // Request identifier (hardcoded)
-        { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 },  // Authentication data (hardcoded)
-        CMD_CONEX_HISTORICAS  // Initial command for example
+        { PROTOCOL_SIGNATURE_1, PROTOCOL_SIGNATURE_2 },
+        0x00,
+        htons(0x1234),
+        { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 },
+        CMD_CONEX_HISTORICAS
     };
 
     while (1) {
-        print_menu();  // Show menu
-        fgets(input, sizeof(input), stdin);  // Get user input
-        sscanf(input, "%d", &command);  // Parse command
+        print_menu();
+        fgets(input, sizeof(input), stdin);
+        sscanf(input, "%d", &command);
 
-        // Validate user selection
         if (command < 0 || command > 7) {
             printf("Invalid command. Please select a number from 0 to 7.\n");
             continue;
         }
 
-        req.command = (MngrCommand)command;  // Update command in the request
+        req.command = (MngrCommand)command;
 
-        // Send request to the server
         send_request(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr), &req);
 
-        // Receive and process the server response
         receive_response(sockfd, (struct sockaddr *)&server_addr, &addrlen, &res);
 
-        // Display received response
         printf("\nReceived response:\n");
         printf("Status: %u\n", res.status);
         printf("Amount: %" PRIu64 "\n", res.cantidad);
         printf("Boolean: %u\n\n", res.booleano);
 
-        // Display additional information based on command
         if (command == CMD_TRANSFORMACIONES_OFF || command == CMD_TRANSFORMACIONES_ON) {
             printf("Transformation status = %s\n", res.booleano ? "ON" : "OFF");
         }
     }
 
-    close(sockfd);  // Close the socket
+    close(sockfd);
     return 0;
 }
 
