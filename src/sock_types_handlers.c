@@ -334,12 +334,31 @@ HandlerErrors handle_client_read (int fd, void * data){
                 sprintf(filename, DEFAULT_MAIL_NAME, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
                 clientData->closedMailFd = fclose(clientData->mailFile);
 
-                for(int i = 0; i < clientData->receiverMailsAmount ;i++){
-
-                    int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, clientData->mailPath, clientData->receiverMails[i], clientData->senderMail, filename);
+                if(clientData->parser->transform && transform_enabled) {
+                    int ret = transform(transform_cmd, clientData->mailPath);
                     if(ret == ERR) {
                         // Server error, should notify the user
                         sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                        if(clientData->parser->status != NULL) free(clientData->parser->status);
+                        clientData->parser->status = strdup(buff);
+                        for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
+                        clientData->receiverMailsAmount = 0;
+                        remove(clientData->mailPath);
+                        free(clientData->mailPath);
+                        Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
+                        Selector_remove(selector, fd, SELECTOR_READ, false);
+                        return HANDLER_OK;
+
+                    }
+                }
+
+                for(int i = 0; i < clientData->receiverMailsAmount ;i++){
+                    int ret = dump(clientData->mailPath, clientData->receiverMails[i], clientData->senderMail, filename);
+                    if(ret == ERR) {
+                        // Server error, should notify the user
+                        sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                        if(clientData->parser->status != NULL) free(clientData->parser->status);
+                        clientData->parser->status = strdup(buff);
                         for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
                         clientData->receiverMailsAmount = 0;
                         remove(clientData->mailPath);
