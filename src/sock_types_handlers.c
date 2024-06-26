@@ -28,6 +28,8 @@
 #define DATA_STR "DATA\r\n"
 #define DOT_CLRF ".\r\n"
 #define LITERAL_STR "%s"
+#define DEFAULT_TMP_MAIL "%s/From:%s %d-%02d-%02d %02d:%02d:%02d"
+#define DEFAULT_MAIL_NAME "From:%s %d-%02d-%02d %02d:%02d:%02d"
 
 /***********************************************************************************************/
 /* Global variables                                                                            */
@@ -122,9 +124,9 @@ HandlerErrors handle_server4 (int fd, void * _){
             data->receiverMailsAmount = 0;
             data->clientDomain = NULL;
             data->senderMail = NULL;
-            data->fileName = NULL;
             data->mailFile = NULL;
-            data->closedMailFd = 1;
+            data->mailPath = NULL;
+            data->closedMailFd = SUCCESS;
             data->parser->vrfyAllowed = vrfy_enabled;
             data->parser->transformAllowed = transform_enabled;
 
@@ -193,9 +195,9 @@ HandlerErrors handle_server6 (int fd, void * _){
             data->receiverMailsAmount = 0;
             data->clientDomain = NULL;
             data->senderMail = NULL;
-            data->fileName = NULL;
             data->mailFile = NULL;
-            data->closedMailFd = 1;
+            data->mailPath = NULL;
+            data->closedMailFd = SUCCESS;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
@@ -276,8 +278,6 @@ HandlerErrors handle_client_read (int fd, void * data){
 
     buffer_compact(&clientData->buffer);
 
-    LOG_DEBUG("CmdToParse: %s", buff);
-
     int ret = parseCmd(clientData->parser, buff);
     if(ret == TERMINAL) {
         // State on the client has been achieved, need to free
@@ -305,43 +305,53 @@ HandlerErrors handle_client_read (int fd, void * data){
     switch(structure->cmd) {
         case HELO: clientData->clientDomain = strdup(structure->heloDomain); break;
         case EHLO: clientData->clientDomain = strdup(structure->ehloDomain); break;
-        case MAIL_FROM: clientData->senderMail = strdup(structure->mailFromStr); break;
+        case MAIL_FROM: {
+            clientData->senderMail = strdup(structure->mailFromStr);
+            if(clientData->mailFile == NULL){
+                char fileName[MAX_DIR_SIZE] = {0};
+
+                time_t t = time(NULL);
+                struct tm tm = *localtime(&t);
+                sprintf(fileName, DEFAULT_TMP_MAIL, TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+                if(clientData->mailPath != NULL){
+                    free(clientData->mailPath);
+                }
+                clientData->mailPath = strdup(fileName);
+                clientData->mailFile = fopen(fileName, RW_FOPEN);
+                if(clientData->mailFile == NULL) {
+                    // Server error, notify the user
+                    char buff[BUFF_SIZE] = {0};
+                    sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                    clientData->parser->status = strdup(buff);
+                    rollBack(clientData->parser);
+                    free(clientData->senderMail);
+                    Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
+                    Selector_remove(selector, fd, SELECTOR_READ, false);
+                    return HANDLER_OK;
+                }
+                clientData->closedMailFd = 1;
+                fprintf(clientData->mailFile, MAIL_FROM_STR, clientData->senderMail);
+            }
+            break;
+        }
         case RCPT_TO: {
             clientData->receiverMails[clientData->receiverMailsAmount] = strdup(structure->rcptToStr);
             clientData->receiverMailsAmount++;
             clientData->receiverMails = realloc(clientData->receiverMails, sizeof(char*)*(clientData->receiverMailsAmount + 1));
-            char fileName[MAX_DIR_SIZE] = {0};
 
-            time_t t = time(NULL);
-            struct tm tm = *localtime(&t);
-            sprintf(fileName, "%s/%s - %d-%02d-%02d - %02d %02d %02d", TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-            clientData->mailFile = fopen(fileName, RW_FOPEN);
-            LOG_DEBUG("mailFilePtr -> %p", clientData->mailFile);
-
-            if(clientData->mailFile == NULL) {
-                // Server error, should close the connection
-                char buff[BUFF_SIZE] = {0};
-                sprintf(buff, SERVER_ERROR, clientData->clientDomain);
-                Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
-                Selector_remove(selector, fd, SELECTOR_READ, false);
-                return HANDLER_OK;
-            }
-            fprintf(clientData->mailFile, MAIL_FROM_STR, clientData->senderMail);
             fprintf(clientData->mailFile, RCPT_TO_STR, clientData->receiverMails[clientData->receiverMailsAmount-1]);
             break;
         }
         case DATA: {
-            LOG_DEBUG("Command Read: %s", structure->dataStr);
             if(structure->dataStr != NULL && strncmp(structure->dataStr, DOT_CLRF, strlen(DOT_CLRF)) == SUCCESS) {
                 fprintf(clientData->mailFile, LITERAL_STR,structure->dataStr);
 
                 time_t t = time(NULL);
                 struct tm tm = *localtime(&t);
 
-                char fileLoc[MAX_DIR_SIZE] = {0};
                 char filename[MAX_DIR_SIZE] = {0};
-                sprintf(fileLoc, "%s/From:%s|%d-%02d-%02d %02d:%02d:%02d", TMP, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-                sprintf(filename, "From:%s|%d-%02d-%02d %02d:%02d:%02d", clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+                sprintf(filename, DEFAULT_MAIL_NAME, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+                clientData->closedMailFd = fclose(clientData->mailFile);
 
                 char userName[MAX_DIR_SIZE/2] = {0};
                 char domain[MAX_DIR_SIZE/2] = {0};
@@ -353,17 +363,21 @@ HandlerErrors handle_client_read (int fd, void * data){
                         j++;
                     }
                     j++;
-                    while(j < receiverLen && clientData->receiverMails[i][j] != '\r' && clientData->receiverMails[i][j] != '\n' ){
-                        domain[j] = clientData->receiverMails[i][j];
+                    int k = 0;
+                    while(j < receiverLen && clientData->receiverMails[i][j] != '\r' && clientData->receiverMails[i][j] != '\n' && clientData->receiverMails[i][j] != '\0' ){
+                        domain[k] = clientData->receiverMails[i][j];
                         j++;
+                        k++;
                     }
 
-                    fflush(clientData->mailFile);
-                    int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, fileLoc, domain, userName, filename);
+                    int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, clientData->mailPath, domain, userName, filename);
                     if(ret == ERR) {
-                        // Server error, should close the connection
-                        clientData->closedMailFd = fclose(clientData->mailFile);
+                        // Server error, should notify the user
                         sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                        for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
+                        clientData->receiverMailsAmount = 0;
+                        remove(clientData->mailPath);
+                        free(clientData->mailPath);
                         Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
                         Selector_remove(selector, fd, SELECTOR_READ, false);
                         return HANDLER_OK;
@@ -375,7 +389,8 @@ HandlerErrors handle_client_read (int fd, void * data){
                 }
                 for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
                 clientData->receiverMailsAmount = 0;
-                clientData->closedMailFd = fclose(clientData->mailFile);
+                remove(clientData->mailPath);
+                free(clientData->mailPath);
             }
             else if(structure->dataStr != NULL){
                 fprintf(clientData->mailFile, LITERAL_STR, structure->dataStr);
@@ -386,7 +401,6 @@ HandlerErrors handle_client_read (int fd, void * data){
         }
         default: break;
     }
-    LOG_DEBUG("readResult: %s\n", clientData->parser->status);
 
     Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_READ, false);

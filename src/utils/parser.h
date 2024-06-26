@@ -106,6 +106,13 @@ Parser initParser(const char * serverDomain);
 int parseCmd(Parser parser, char * command);
 
 /**
+ * In some cases the server may have an error and will need to
+ * go to a previous state, this function is used to that purpouse,
+ * go to the previous state it had.
+ */
+void rollBack(Parser parser);
+
+/**
  * Destroys the parser, this should be done iif the server is
  * about to finish de service with the client, because all the
  * inner parser state will be lost.

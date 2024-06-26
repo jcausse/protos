@@ -857,6 +857,38 @@ int parseCmd(Parser parser, char * command) {
     }
 }
 
+
+/**
+ * In some cases the server may have an error and will need to
+ * go to a previous state, this function is used to that purpouse,
+ * go to the previous state it had.
+ */
+void rollBack(Parser parser) {
+    switch(parser->machine->currentState) {
+        case GREETING: {
+            parser->machine->loginState = 0;
+            parser->machine->currentState = WELCOME;
+            parser->machine->priorState = WELCOME;
+            break;
+        }
+        case MAIL_FROM_OK: {
+            parser->machine->currentState = GREETING;
+            parser->machine->priorState = WELCOME;
+            break;
+        }
+        case RCPT_TO_OK: {
+            parser->machine->currentState = MAIL_FROM_OK;
+            parser->machine->priorState = GREETING;
+            break;
+        }
+        case DATA_INPUT: {
+            parser->machine->currentState = RCPT_TO_OK;
+            parser->machine->priorState = MAIL_FROM_OK;
+        }
+        default: return;
+    }
+}
+
 /**
  * Destroys the parser, this should be done if the server is
  * about to finish the service with the client, because all the

@@ -377,7 +377,7 @@ void free_client_data(void * arg){
         return;
     }
 
-    destroyParser(data->parser);
+    FREE_PTR(destroyParser, data->parser);
 
     FREE_PTR(free, data->clientDomain);
     FREE_PTR(free, data->senderMail);
@@ -389,7 +389,6 @@ void free_client_data(void * arg){
         free(data->receiverMails);
     }
 
-    FREE_PTR(free, data->fileName);
     if(!(data->closedMailFd < 1)) {
         fclose(data->mailFile);
     }

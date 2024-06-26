@@ -6,19 +6,21 @@
  */
 
 #include "transform.h"
+#include "../lib/logger.h"
 
 #define TMP "./tmp"
 #define INBOX "./inbox"
-#define FILE_PERMISSIONS 0770
+#define MODE_T 0770
 #define SUCCESS 0
 #define ERR -1
+#define BUFF_SIZE 1024
 
 extern Logger logger;
 
 static void check_dir(char * dir) {
     struct stat st = {0};
     if (stat(dir, &st) == -1) {
-        mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
+        mkdir(dir, MODE_T);
     }
 }
 
@@ -31,15 +33,17 @@ static int transform_mail(char * mail, char * command, char * toSave) {
 }
 
 static int send_mail(char * mail, char * toSave) {
-    int mailFd = open(mail, 0, FILE_PERMISSIONS);
-    int toSaveFd = creat(toSave, FILE_PERMISSIONS);
-    if(mailFd < 0 || toSaveFd < 0) return ERR;
+
+    int mailFd = open(mail, 0 , MODE_T);
+    int toSaveFd = open(toSave, O_CREAT | O_EXCL | O_WRONLY , MODE_T);
+
+    if(mailFd == ERR || toSaveFd == ERR) return ERR;
 
     int n;
     struct stat s;
     off_t offset = 0;
 
-    fstat(toSaveFd, &s);
+    fstat(mailFd, &s);
     n = s.st_size;
 
     while(n > 0) {
@@ -52,14 +56,18 @@ static int send_mail(char * mail, char * toSave) {
            n -= sb;
         }
     }
+
+    close(mailFd);
+    close(toSaveFd);
+
     return SUCCESS;
 }
 
 int transform(bool enabled, char * cmd, char * mail, char * domain, char * user, char * s_name){
     check_dir(INBOX);
 
-    char * user_dir = malloc(strlen(INBOX) + strlen(user) + strlen(domain) + 3);
-    char * toSave = malloc(strlen(INBOX) + strlen(s_name) + strlen(user) + strlen(domain) + 5);
+    char user_dir[BUFF_SIZE] = {0};
+    char toSave[BUFF_SIZE] = {0};
 
     snprintf(user_dir, strlen(INBOX) + strlen(domain) + 2, "%s/%s", INBOX, domain);
     check_dir(user_dir);
@@ -75,8 +83,6 @@ int transform(bool enabled, char * cmd, char * mail, char * domain, char * user,
     else {
         transform = send_mail(mail, toSave);
     }
-
-    free(toSave);
 
     return transform != SUCCESS ? ERR : SUCCESS;
 }
