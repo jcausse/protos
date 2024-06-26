@@ -11,12 +11,13 @@
 #define __CLIENT_DATA_H__
 
 #include <stdbool.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "parser.h"
+#include "buffer.h"
 
-#define WRITE_BUFF_SIZE 1400
-#define READ_BUFF_SIZE 1400
+#define BUFF_SIZE 1400
 
 #define TMP "./tmp"
 #define INBOX "./inbox"
@@ -25,11 +26,8 @@
 typedef struct _ClientData_t {
     Parser parser;
 
-    char w_buff[WRITE_BUFF_SIZE];
-    size_t w_count;
-
-    char r_buff[WRITE_BUFF_SIZE];
-    size_t r_count;
+    uint8_t r_buff[BUFF_SIZE];
+    buffer buffer;
 
     char * clientDomain;
 
@@ -39,7 +37,9 @@ typedef struct _ClientData_t {
     int receiverMailsAmount;
 
     char * fileName;
+
     FILE *mailFile;
+    int closedMailFd;
 } _ClientData_t;
 
 typedef struct _ClientData_t * ClientData;
