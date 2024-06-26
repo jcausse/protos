@@ -53,6 +53,8 @@ typedef struct _Parser_t {
     CommandStructure * structure;
     char * serverDom;
     bool transform;
+    bool transformAllowed;
+    bool vrfyAllowed;
 } _Parser_t;
 
 typedef struct _Parser_t * Parser;

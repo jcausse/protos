@@ -390,7 +390,7 @@ void free_client_data(void * arg){
     }
 
     FREE_PTR(free, data->fileName);
-    if(data->mailFile != NULL) {
+    if(!(data->closedMailFd < 1)) {
         fclose(data->mailFile);
     }
 

@@ -22,7 +22,7 @@
 #define REL_INBOX "../inbox"
 #define RW_FOPEN "a+"
 
-#define SERVER_ERROR "421-%s Service not available, closing transmission channel.\r\n"
+#define SERVER_ERROR "421-%s Server error.\r\n"
 #define MAIL_FROM_STR "MAIL FROM: <%s>\r\n"
 #define RCPT_TO_STR "RCPT TO: <%s>\r\n"
 #define DATA_STR "DATA\r\n"
@@ -124,6 +124,9 @@ HandlerErrors handle_server4 (int fd, void * _){
             data->senderMail = NULL;
             data->fileName = NULL;
             data->mailFile = NULL;
+            data->closedMailFd = 1;
+            data->parser->vrfyAllowed = vrfy_enabled;
+            data->parser->transformAllowed = transform_enabled;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
@@ -192,6 +195,7 @@ HandlerErrors handle_server6 (int fd, void * _){
             data->senderMail = NULL;
             data->fileName = NULL;
             data->mailFile = NULL;
+            data->closedMailFd = 1;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(
@@ -246,8 +250,6 @@ HandlerErrors handle_client_read (int fd, void * data){
         return HANDLER_OK;
     }
 
-    LOG_DEBUG("readBuff: %sbytes: %lu", buff, bytes);
-
     bool readyToParse = false;
 
     for(int i = 0; i < bytes && buff[i] != '\0'; i++){
@@ -273,7 +275,9 @@ HandlerErrors handle_client_read (int fd, void * data){
     buff[i] = c;
 
     buffer_compact(&clientData->buffer);
-    LOG_DEBUG("Parsed Command: %s. CommandLen: %lu", buff, strlen(buff));
+
+    LOG_DEBUG("CmdToParse: %s", buff);
+
     int ret = parseCmd(clientData->parser, buff);
     if(ret == TERMINAL) {
         // State on the client has been achieved, need to free
@@ -356,14 +360,13 @@ HandlerErrors handle_client_read (int fd, void * data){
 
                     fflush(clientData->mailFile);
                     int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, fileLoc, domain, userName, filename);
-
                     if(ret == ERR) {
-                        if(clientData->mailFile == NULL) {
-                            // Server error, should close the connection
-                            Selector_remove(selector, fd, SELECTOR_READ, false);
-                            safe_close(fd);
-                            return HANDLER_OK;
-                        }
+                        // Server error, should close the connection
+                        clientData->closedMailFd = fclose(clientData->mailFile);
+                        sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                        Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
+                        Selector_remove(selector, fd, SELECTOR_READ, false);
+                        return HANDLER_OK;
                     }
                     for(int k = 0; k < MAX_DIR_SIZE/2 ;k++){
                         userName[k] = '\0';
@@ -372,7 +375,7 @@ HandlerErrors handle_client_read (int fd, void * data){
                 }
                 for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
                 clientData->receiverMailsAmount = 0;
-                fclose(clientData->mailFile);
+                clientData->closedMailFd = fclose(clientData->mailFile);
             }
             else if(structure->dataStr != NULL){
                 fprintf(clientData->mailFile, LITERAL_STR, structure->dataStr);
@@ -456,11 +459,15 @@ HandlerErrors handle_client_write (int fd, void * data){
         return HANDLER_OK;
     }
 
+    if(clientData->parser->structure != NULL &&
+        clientData->parser->structure->cmd == QUIT) {
+        Selector_remove(selector, fd, SELECTOR_WRITE, true);
+        safe_close(fd);
+        return HANDLER_OK;
+    }
+
     Selector_add(selector, fd, SELECTOR_READ, -1, NULL);
     Selector_remove(selector, fd, SELECTOR_WRITE, false);
-
-    // Clear buffer
-    //clientData->w_count = clearBuff(bytes, clientData->w_buff);
     return HANDLER_OK;
 }
 

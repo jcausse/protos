@@ -37,7 +37,9 @@ typedef struct _ClientData_t {
     int receiverMailsAmount;
 
     char * fileName;
+
     FILE *mailFile;
+    int closedMailFd;
 } _ClientData_t;
 
 typedef struct _ClientData_t * ClientData;
