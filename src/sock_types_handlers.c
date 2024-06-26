@@ -231,7 +231,6 @@ HandlerErrors handle_server6 (int fd, void * _){
             done = true;
         }
     } while (!done);
-    Stats_decrement(stats, STATKEY_CURR_CONNS);
 
     return HANDLER_OK;
 }
@@ -239,12 +238,14 @@ HandlerErrors handle_server6 (int fd, void * _){
 /**
  * \todo
  */
-HandlerErrors handle_client_read (int fd, void * data){
+HandlerErrors handle_client_read(int fd, void * data){
     ClientData clientData = (ClientData) data;
     char buff[BUFF_SIZE] = {0};
 
     ssize_t bytes = recv(fd, buff, BUFF_SIZE, MSG_DONTWAIT);
     if(bytes == CLOSED) {
+        LOG_VERBOSE("Connection ended");
+        Stats_decrement(stats, STATKEY_CURR_CONNS);
         Selector_remove(selector, fd, SELECTOR_READ_WRITE, true);
         safe_close(fd);
         return HANDLER_OK;
@@ -252,6 +253,8 @@ HandlerErrors handle_client_read (int fd, void * data){
     else if(bytes == ERR && (errno == EAGAIN || errno == EWOULDBLOCK)) {
         return HANDLER_OK;
     }
+
+    Stats_update(stats, STATKEY_TRANSF_BYTES, bytes); // Increment transferred bytes by the number of bytes read
 
     bool readyToParse = false;
 
@@ -281,27 +284,17 @@ HandlerErrors handle_client_read (int fd, void * data){
 
     int ret = parseCmd(clientData->parser, buff);
     if(ret == TERMINAL) {
-        // State on the client has been achieved, need to free
-        // file resources, discard temp files created that are not
-        // useful and return a closing message to the client
-        // DO NOT CLOSE THE SELECTOR_WRITE UNTIL THE CLOSING CONNECTION
-        // MESSAGE IS SENT
         clientData->parser->structure->cmd = QUIT;
         Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
         Selector_remove(selector, fd, SELECTOR_READ, false);
         return HANDLER_OK;
     }
     if(ret == ERR) {
-        // Not new info has to be processed, all it is needed is
-        // to inform the user the error it has in handle_client_write
         Selector_add(selector, fd, SELECTOR_WRITE, - 1, NULL);
         Selector_remove(selector, fd, SELECTOR_READ, false);
         return HANDLER_OK;
     }
 
-    // TODO - Handle custom parser return info (create files
-    // and persist any important info such as directories
-    // and mail info sent by the client
     CommandStructure * structure = clientData->parser->structure;
     switch(structure->cmd) {
         case HELO: clientData->clientDomain = strdup(structure->heloDomain); break;
@@ -340,7 +333,6 @@ HandlerErrors handle_client_read (int fd, void * data){
                 if(clientData->parser->transform && transform_enabled) {
                     int ret = transform(transform_cmd, clientData->mailPath);
                     if(ret == ERR) {
-                        // Server error, should notify the user
                         sprintf(buff, SERVER_ERROR, clientData->clientDomain);
                         if(clientData->parser->status != NULL) free(clientData->parser->status);
                         clientData->parser->status = strdup(buff);
@@ -358,10 +350,8 @@ HandlerErrors handle_client_read (int fd, void * data){
                 for(int i = 0; i < clientData->receiverMailsAmount ;i++){
                     int ret = dump(clientData->mailPath, clientData->receiverMails[i], clientData->senderMail, filename);
                     if(ret == ERR) {
-                        // Server error, should notify the user
                         sprintf(buff, SERVER_ERROR, clientData->clientDomain);
                         if(clientData->parser->status != NULL) free(clientData->parser->status);
-                        clientData->parser->status = strdup(buff);
                         for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
                         clientData->receiverMailsAmount = 0;
                         remove(clientData->mailPath);
@@ -382,7 +372,6 @@ HandlerErrors handle_client_read (int fd, void * data){
             else {
                 clientData->mailFile = fopen(clientData->mailPath, RW_FOPEN);
                 if(clientData->mailFile == NULL) {
-                    // Server error, notify the user
                     char buff[BUFF_SIZE] = {0};
                     sprintf(buff, SERVER_ERROR, clientData->clientDomain);
                     clientData->parser->status = strdup(buff);
@@ -402,6 +391,8 @@ HandlerErrors handle_client_read (int fd, void * data){
     Selector_remove(selector, fd, SELECTOR_READ, false);
     return HANDLER_OK;
 }
+
+
 
 HandlerErrors handle_manager_read (int fd, void * data){
     (void) data;
@@ -450,7 +441,7 @@ HandlerErrors handle_manager_read (int fd, void * data){
 /**
  * \todo
  */
-HandlerErrors handle_client_write (int fd, void * data){
+HandlerErrors handle_client_write(int fd, void * data){
     ClientData clientData = (ClientData) data;
 
     if(clientData->parser->status == NULL){
@@ -461,6 +452,8 @@ HandlerErrors handle_client_write (int fd, void * data){
 
     ssize_t bytes = send(fd, clientData->parser->status, strlen(clientData->parser->status), MSG_DONTWAIT);
     if(bytes == CLOSED) {
+        LOG_VERBOSE("Connection ended");
+        Stats_decrement(stats, STATKEY_CURR_CONNS);
         Selector_remove(selector, fd, SELECTOR_READ_WRITE, true);
         safe_close(fd);
         return HANDLER_OK;
@@ -468,6 +461,8 @@ HandlerErrors handle_client_write (int fd, void * data){
     else if(bytes == ERR && (errno == EAGAIN || errno == EWOULDBLOCK)) {
         return HANDLER_OK;
     }
+
+    Stats_update(stats, STATKEY_TRANSF_BYTES, bytes); // Increment transferred bytes by the number of bytes sent
 
     if(clientData->parser->structure != NULL &&
         clientData->parser->structure->cmd == QUIT) {
@@ -481,6 +476,8 @@ HandlerErrors handle_client_write (int fd, void * data){
     return HANDLER_OK;
 }
 
+
+
 HandlerErrors handle_manager_write(int fd, void *data) {
     (void) data;
 
@@ -491,6 +488,7 @@ HandlerErrors handle_manager_write(int fd, void *data) {
     response[0] = 0xFF;
     response[1] = 0xFE;
     response[2] = 0x00;
+    
 
     /* Set identifier */
     uint16_t identifier = 0x1234;
