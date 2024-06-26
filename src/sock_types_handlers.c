@@ -196,6 +196,8 @@ HandlerErrors handle_server6 (int fd, void * _){
             data->mailFile = NULL;
             data->mailPath = NULL;
             data->closedMailFd = SUCCESS;
+            data->parser->vrfyAllowed = vrfy_enabled;
+            data->parser->transformAllowed = transform_enabled;
 
             /* Add the accepted connection's fd to the Selector */
             SelectorErrors ret = Selector_add(

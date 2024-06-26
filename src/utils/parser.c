@@ -73,6 +73,10 @@
 #define SPACE ' '
 #define CLRF_LEN 2
 
+
+extern bool     vrfy_enabled;
+extern char     *vrfy_mails;
+
 char *strdup(const char *s);
 /**
  * States available in the server, this will affect how the parser
@@ -158,7 +162,7 @@ static int welcomeTransition(Parser parser, char * command) {
         return SUCCESS;
     }
     else if((strncmp(command, VRFY_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == ' ') {
-        if(!parser->vrfyAllowed) {
+        if(!parser->vrfyAllowed || !vrfy_enabled) {
             parser->machine->currentState = WELCOME;
             parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
             parser->structure = malloc(sizeof(CommandStructure));
@@ -321,7 +325,7 @@ static int greetingTransition(Parser parser, char * command) {
         return SUCCESS;
     }
     else if((strncmp(command, VRFY_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == SPACE) {
-        if(!parser->vrfyAllowed) {
+        if(!parser->vrfyAllowed || !vrfy_enabled) {
             parser->machine->currentState = WELCOME;
             parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
             parser->structure = malloc(sizeof(CommandStructure));
@@ -400,7 +404,7 @@ static int vrfyTransition(Parser parser, char * command) {
     char parsedCmd[256] = {0};
     for(int i=0; i<256 && command[i] != '\0' && command[i] != '\r'; i++) parsedCmd[i] = command[i];
 
-    int res = vrfy(parsedCmd, VALID_FILE, &result, &count);
+    int res = vrfy(parsedCmd, vrfy_mails, &result, &count);
     if(res == ERR) {
         parser->status = strdup(VRFY_NOT_FOUND);
         parser->machine->currentState = parser->machine->priorState;
@@ -528,7 +532,7 @@ static int mailFromOkTransition(Parser parser, char * command) {
         return SUCCESS;
     }
     else if((strncmp(command, VRFY_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == SPACE) {
-        if(!parser->vrfyAllowed) {
+        if(!parser->vrfyAllowed || !vrfy_enabled) {
             parser->machine->currentState = WELCOME;
             parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
             parser->structure = malloc(sizeof(CommandStructure));
@@ -678,7 +682,7 @@ static int rcptToOkTransition(Parser parser, char * command) {
         return SUCCESS;
     }
     else if((strncmp(command, VRFY_CMD, CMD_LEN) == SUCCESS) && command[CMD_LEN] == SPACE) {
-        if(!parser->vrfyAllowed) {
+        if(!parser->vrfyAllowed || !vrfy_enabled) {
             parser->machine->currentState = WELCOME;
             parser->status = strdup(CMD_NOT_IMPLEMENTED_MSG);
             parser->structure = malloc(sizeof(CommandStructure));
@@ -816,7 +820,8 @@ Parser initParser(const char * serverDomain) {
     sprintf(buff, WELCOME_MSG, parser->serverDom);
     parser->status = strdup(buff);
     parser->structure = NULL;
-    parser->transform = false;
+    parser->transform = true;
+    parser->vrfyAllowed = true;
     return parser;
 }
 

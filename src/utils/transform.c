@@ -34,7 +34,7 @@ int transform(char * cmd, char * mailDir) {
     char buff[BUFF_SIZE] = {0};
 
     for(int i = 0; i < BUFF_SIZE && buff[i] != '\0'; i++) buff[i] = '\0';
-    snprintf(buff, 320, "%s %s > %s", cmd, mailDir, mailDir);
+    snprintf(buff, 320, "%s '%s' > '%s'", cmd, mailDir, mailDir);
 
     int retVal = system(buff);
 

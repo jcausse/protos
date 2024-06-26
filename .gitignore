@@ -53,6 +53,7 @@ Mkfile.old
 dkms.conf
 smtpd.log
 vgcore.*
+vrfyMails.txt
 
 # Others
 .DS_Store
