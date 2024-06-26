@@ -394,7 +394,7 @@ HandlerErrors handle_client_read(int fd, void * data){
 
 
 
-HandlerErrors handle_manager_read (int fd, void * data){
+HandlerErrors handle_manager_read(int fd, void * data) {
     (void) data;
 
     /* Local variables */
@@ -404,6 +404,7 @@ HandlerErrors handle_manager_read (int fd, void * data){
     ssize_t read_bytes;
 
     /* Attempt to read from socket */
+    manager_addr_len = sizeof(manager_addr); // Ensure manager_addr_len is properly initialized
     read_bytes = recvfrom(
         fd,
         buffer,
@@ -416,14 +417,20 @@ HandlerErrors handle_manager_read (int fd, void * data){
     LOG_VERBOSE("Received %ld bytes from manager", read_bytes);
 
     /* If an error occurred, return */
-    if (read_bytes == -1){
-        return HANDLER_NO_OP;
+    if (read_bytes == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            LOG_VERBOSE("No data available for reading (EAGAIN or EWOULDBLOCK)");
+            return HANDLER_NO_OP;
+        } else {
+            LOG_VERBOSE("recvfrom failed");
+            return HANDLER_NO_OP;
+        }
     }
 
     /* Parse read message */
     MngrCommand cmd;
-    if (! manager_parse(buffer, (size_t) read_bytes, &cmd)){
-        LOG_VERBOSE(" Manager sent an invalid command.");
+    if (!manager_parse(buffer, (size_t) read_bytes, &cmd)) {
+        LOG_VERBOSE("Manager sent an invalid command.");
         return HANDLER_NO_OP;
     }
     LOG_VERBOSE("DETECTED %d\n", current_manager_cmd = cmd);
@@ -433,6 +440,7 @@ HandlerErrors handle_manager_read (int fd, void * data){
 
     return HANDLER_OK;
 }
+
 
 /***********************************************************************************************/
 /* Write handler definitions                                                                   */
