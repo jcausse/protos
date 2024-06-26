@@ -34,16 +34,16 @@ bool manager_parse(const uint8_t *buff, size_t len, MngrCommand *cmd) {
     }
 
     // Extract the command byte
-    uint8_t command_byte = buff[14]; // Command is located at byte 14
+    uint8_t command_byte = buff[13]; // Command is located at byte 13
 
     // Validate and assign the command
     switch (command_byte) {
         case CMD_CONEX_HISTORICAS:
         case CMD_CONEX_CONCURRENTES:
         case CMD_BYTES_TRANSFERIDOS:
-        // case CMD_ESTADO_TRANSFORMACIONES:
-        // case CMD_TRANSFORMACIONES_ON:
-        // case CMD_TRANSFORMACIONES_OFF:
+        case CMD_ESTADO_TRANSFORMACIONES:
+        case CMD_TRANSFORMACIONES_ON:
+        case CMD_TRANSFORMACIONES_OFF:
             *cmd = (MngrCommand)command_byte;
             return true;
         default:
