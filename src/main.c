@@ -90,7 +90,7 @@ void sigint_handler(int sigint);
 
 /**
  * \brief       Free all data from a client (a structure `_ClientData_t`).
- * 
+ *
  * \param[in] arg       A pointer to the data to free (a pointer `ClientData`).
  */
 void free_client_data(void * arg);
@@ -390,7 +390,9 @@ void free_client_data(void * arg){
     }
 
     FREE_PTR(free, data->fileName);
-    FREE_PTR(free, data->mailFile);
+    if(data->mailFile != NULL) {
+        fclose(data->mailFile);
+    }
 
     free(data);
 }

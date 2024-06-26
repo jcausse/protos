@@ -11,9 +11,11 @@
 #define __CLIENT_DATA_H__
 
 #include <stdbool.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "parser.h"
+#include "buffer.h"
 
 #define BUFF_SIZE 1400
 
@@ -24,11 +26,8 @@
 typedef struct _ClientData_t {
     Parser parser;
 
-    char w_buff[BUFF_SIZE];
-    size_t w_count;
-
-    char r_buff[BUFF_SIZE];
-    size_t r_count;
+    uint8_t r_buff[BUFF_SIZE];
+    buffer buffer;
 
     char * clientDomain;
 
