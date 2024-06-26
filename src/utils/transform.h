@@ -32,6 +32,6 @@
  *
  * \return                      On success, 254. On failure, 255 via pipe.
  */
-int transform(bool enabled, char * cmd, char * mailDir, char * domain, char * user, char * s_name);
+int transform(bool enabled, char * cmd, char * mailDir, char * receiverMail, char * senderMail, char * fileName);
 
 #endif // __TRANSFORM_H__

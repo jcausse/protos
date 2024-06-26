@@ -17,20 +17,18 @@
 
 #define CLOSED 0
 #define MANAGER_READ_BUFF_SIZE 15
-#define MAX_DIR_SIZE 512 // Out file system has a 2-level directory to save the mails
 #define REL_TMP "../tmp"
 #define REL_INBOX "../inbox"
 #define RW_FOPEN "a+"
 
 #define SERVER_ERROR "421-%s Server error.\r\n"
-#define MAIL_FROM_STR "MAIL FROM: <%s>\r\n"
-#define RCPT_TO_STR "RCPT TO: <%s>\r\n"
-#define DATA_STR "DATA\r\n"
-#define DOT_CLRF ".\r\n"
 #define LITERAL_STR "%s"
 #define DEFAULT_TMP_MAIL "%s/From:%s %d-%02d-%02d %02d:%02d:%02d"
 #define DEFAULT_MAIL_NAME "From:%s %d-%02d-%02d %02d:%02d:%02d"
 
+#define DOT_CLRF ".\r\n"
+
+#define MAX_DIR_SIZE 512 // Out file system has a 2-level directory to save the mails
 /***********************************************************************************************/
 /* Global variables                                                                            */
 /***********************************************************************************************/
@@ -317,7 +315,50 @@ HandlerErrors handle_client_read (int fd, void * data){
                     free(clientData->mailPath);
                 }
                 clientData->mailPath = strdup(fileName);
-                clientData->mailFile = fopen(fileName, RW_FOPEN);
+            }
+            break;
+        }
+        case RCPT_TO: {
+            clientData->receiverMails[clientData->receiverMailsAmount] = strdup(structure->rcptToStr);
+            clientData->receiverMailsAmount++;
+            clientData->receiverMails = realloc(clientData->receiverMails, sizeof(char*)*(clientData->receiverMailsAmount + 1));
+            break;
+        }
+        case DATA: {
+            if(structure->dataStr != NULL && strncmp(structure->dataStr, DOT_CLRF, strlen(DOT_CLRF)) == SUCCESS) {
+
+                time_t t = time(NULL);
+                struct tm tm = *localtime(&t);
+
+                char filename[MAX_DIR_SIZE] = {0};
+                sprintf(filename, DEFAULT_MAIL_NAME, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+                clientData->closedMailFd = fclose(clientData->mailFile);
+
+                for(int i = 0; i < clientData->receiverMailsAmount ;i++){
+
+                    int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, clientData->mailPath, clientData->receiverMails[i], clientData->senderMail, filename);
+                    if(ret == ERR) {
+                        // Server error, should notify the user
+                        sprintf(buff, SERVER_ERROR, clientData->clientDomain);
+                        for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
+                        clientData->receiverMailsAmount = 0;
+                        remove(clientData->mailPath);
+                        free(clientData->mailPath);
+                        Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
+                        Selector_remove(selector, fd, SELECTOR_READ, false);
+                        return HANDLER_OK;
+                    }
+                }
+                for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
+                clientData->receiverMailsAmount = 0;
+                remove(clientData->mailPath);
+                free(clientData->mailPath);
+            }
+            else if(structure->dataStr != NULL){
+                fprintf(clientData->mailFile, LITERAL_STR, structure->dataStr);
+            }
+            else {
+                clientData->mailFile = fopen(clientData->mailPath, RW_FOPEN);
                 if(clientData->mailFile == NULL) {
                     // Server error, notify the user
                     char buff[BUFF_SIZE] = {0};
@@ -330,73 +371,6 @@ HandlerErrors handle_client_read (int fd, void * data){
                     return HANDLER_OK;
                 }
                 clientData->closedMailFd = 1;
-                fprintf(clientData->mailFile, MAIL_FROM_STR, clientData->senderMail);
-            }
-            break;
-        }
-        case RCPT_TO: {
-            clientData->receiverMails[clientData->receiverMailsAmount] = strdup(structure->rcptToStr);
-            clientData->receiverMailsAmount++;
-            clientData->receiverMails = realloc(clientData->receiverMails, sizeof(char*)*(clientData->receiverMailsAmount + 1));
-
-            fprintf(clientData->mailFile, RCPT_TO_STR, clientData->receiverMails[clientData->receiverMailsAmount-1]);
-            break;
-        }
-        case DATA: {
-            if(structure->dataStr != NULL && strncmp(structure->dataStr, DOT_CLRF, strlen(DOT_CLRF)) == SUCCESS) {
-                fprintf(clientData->mailFile, LITERAL_STR,structure->dataStr);
-
-                time_t t = time(NULL);
-                struct tm tm = *localtime(&t);
-
-                char filename[MAX_DIR_SIZE] = {0};
-                sprintf(filename, DEFAULT_MAIL_NAME, clientData->senderMail, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-                clientData->closedMailFd = fclose(clientData->mailFile);
-
-                char userName[MAX_DIR_SIZE/2] = {0};
-                char domain[MAX_DIR_SIZE/2] = {0};
-                for(int i = 0; i < clientData->receiverMailsAmount ;i++){
-                    int receiverLen = strlen(clientData->receiverMails[i]);
-                    int j = 0;
-                    while(j < receiverLen && clientData->receiverMails[i][j] != '@'){
-                        userName[j] = clientData->receiverMails[i][j];
-                        j++;
-                    }
-                    j++;
-                    int k = 0;
-                    while(j < receiverLen && clientData->receiverMails[i][j] != '\r' && clientData->receiverMails[i][j] != '\n' && clientData->receiverMails[i][j] != '\0' ){
-                        domain[k] = clientData->receiverMails[i][j];
-                        j++;
-                        k++;
-                    }
-
-                    int ret = transform(clientData->parser->transform && transform_enabled, transform_cmd, clientData->mailPath, domain, userName, filename);
-                    if(ret == ERR) {
-                        // Server error, should notify the user
-                        sprintf(buff, SERVER_ERROR, clientData->clientDomain);
-                        for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
-                        clientData->receiverMailsAmount = 0;
-                        remove(clientData->mailPath);
-                        free(clientData->mailPath);
-                        Selector_add(selector, fd, SELECTOR_WRITE, -1, NULL);
-                        Selector_remove(selector, fd, SELECTOR_READ, false);
-                        return HANDLER_OK;
-                    }
-                    for(int k = 0; k < MAX_DIR_SIZE/2 ;k++){
-                        userName[k] = '\0';
-                        domain[k] = '\0';
-                    }
-                }
-                for(int i = 0; i < clientData->receiverMailsAmount ;i++) free(clientData->receiverMails[i]);
-                clientData->receiverMailsAmount = 0;
-                remove(clientData->mailPath);
-                free(clientData->mailPath);
-            }
-            else if(structure->dataStr != NULL){
-                fprintf(clientData->mailFile, LITERAL_STR, structure->dataStr);
-            }
-            else {
-                fprintf(clientData->mailFile, DATA_STR); // The next state will be the data
             }
         }
         default: break;

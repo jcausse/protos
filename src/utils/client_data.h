@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 #include "parser.h"
 #include "buffer.h"
 
@@ -42,5 +43,10 @@ typedef struct _ClientData_t {
 } _ClientData_t;
 
 typedef struct _ClientData_t * ClientData;
+
+typedef struct _MailThread_t {
+    char *receiverMail;
+    pthread_t thread;
+} _MailThread_t;
 
 #endif // __CLIENT_DATA_H__
